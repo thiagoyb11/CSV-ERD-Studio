@@ -1,0 +1,7 @@
+[package]
+name = "csv-erd-studio-backend"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+# Dependencias previstas: axum, tokio, serde, polars, uuid y thiserror.

@@ -1,0 +1,285 @@
+```mermaid
+classDiagram
+    direction LR
+
+    namespace Frontend_React {
+        class CsvInputFile {
+            +String id
+            +File file
+            +String relativePath
+            +UploadStatus status
+            +number progress
+            +String error
+        }
+
+        class UploadStatus {
+            <<enumeration>>
+            PENDING
+            UPLOADING
+            ANALYZING
+            COMPLETED
+            ERROR
+        }
+
+        class UploadClient {
+            +analyzeFiles(files) AnalysisResult
+            +getJob(jobId) AnalysisJob
+            +cancelJob(jobId)
+        }
+
+        class AnalysisStore {
+            +CsvInputFile[] files
+            +AnalysisJob job
+            +AnalysisResult result
+            +addFiles(files)
+            +startAnalysis()
+            +updateProgress()
+            +clear()
+        }
+    }
+
+    namespace API_Axum {
+        class UploadController {
+            <<handler>>
+            +analyze(multipart) Json
+            +jobStatus(jobId) Json
+            +cancel(jobId) StatusCode
+        }
+
+        class UploadPolicy {
+            +usize maximumFileSize
+            +usize maximumFileCount
+            +String[] allowedExtensions
+            +validateFile(metadata) Result
+            +validateRequest(metadata) Result
+        }
+
+        class ApiError {
+            <<enumeration>>
+            INVALID_FILE
+            FILE_TOO_LARGE
+            PARSING_ERROR
+            ANALYSIS_ERROR
+            JOB_NOT_FOUND
+            INTERNAL_ERROR
+        }
+    }
+
+    namespace Application {
+        class AnalysisService {
+            +createJob(files) AnalysisJob
+            +analyze(jobId) AnalysisResult
+            +cancel(jobId)
+        }
+
+        class AnalysisJob {
+            +Uuid id
+            +JobStatus status
+            +f32 progress
+            +DateTime createdAt
+            +String error
+        }
+
+        class JobStatus {
+            <<enumeration>>
+            PENDING
+            SAVING_FILES
+            PROFILING_TABLES
+            DETECTING_KEYS
+            DETECTING_RELATIONSHIPS
+            COMPLETED
+            CANCELLED
+            FAILED
+        }
+    }
+
+    namespace Infrastructure {
+        class FileStorage {
+            <<trait>>
+            +save(upload) StoredCsv
+            +open(fileId) Reader
+            +delete(fileId)
+            +deleteJobFiles(jobId)
+        }
+
+        class TemporaryFileStorage {
+            +Path directory
+            +save(upload) StoredCsv
+            +open(fileId) Reader
+            +delete(fileId)
+            +deleteJobFiles(jobId)
+        }
+
+        class StoredCsv {
+            +Uuid id
+            +String originalName
+            +Path internalPath
+            +u64 size
+            +String contentType
+        }
+
+        class CsvAnalyzer {
+            <<trait>>
+            +analyze(file) TableProfile
+        }
+
+        class PolarsCsvAnalyzer {
+            +CsvReadOptions options
+            +analyze(file) TableProfile
+            -loadDataFrame(file) DataFrame
+        }
+    }
+
+    namespace Analysis {
+        class SchemaProfiler {
+            +profile(dataframe) ColumnProfile[]
+            -inferType(series) InferredType
+            -sampleValues(series) Value[]
+        }
+
+        class KeyDetector {
+            +detectCandidateKeys(table) CandidateKey[]
+            -scoreUniqueness(column) f32
+            -scoreIdentifierName(column) f32
+        }
+
+        class RelationshipDetector {
+            +detect(tables) RelationshipSuggestion[]
+            -compareColumns(source, target) Evidence
+            -detectCardinality(source, target) Cardinality
+        }
+
+        class ConfidenceScorer {
+            +f32 nameWeight
+            +f32 typeWeight
+            +f32 containmentWeight
+            +f32 uniquenessWeight
+            +calculate(evidence) f32
+        }
+    }
+
+    namespace Domain {
+        class AnalysisResult {
+            +Uuid jobId
+            +DateTime createdAt
+            +TableProfile[] tables
+            +RelationshipSuggestion[] relationships
+        }
+
+        class TableProfile {
+            +Uuid id
+            +String name
+            +String fileName
+            +u64 rowCount
+            +char delimiter
+            +ColumnProfile[] columns
+            +CandidateKey[] candidateKeys
+            +String[] warnings
+        }
+
+        class ColumnProfile {
+            +Uuid id
+            +String name
+            +InferredType inferredType
+            +bool nullable
+            +u64 uniqueCount
+            +u64 nullCount
+            +Value[] sampleValues
+        }
+
+        class InferredType {
+            <<enumeration>>
+            INTEGER
+            DECIMAL
+            BOOLEAN
+            DATE
+            DATETIME
+            STRING
+            EMPTY
+            MIXED
+        }
+
+        class CandidateKey {
+            +Uuid id
+            +Uuid[] columnIds
+            +f32 confidence
+        }
+
+        class RelationshipSuggestion {
+            +Uuid id
+            +ColumnReference source
+            +ColumnReference target
+            +Cardinality cardinality
+            +f32 confidence
+            +RelationshipStatus status
+            +RelationshipEvidence evidence
+        }
+
+        class ColumnReference {
+            +Uuid tableId
+            +Uuid columnId
+        }
+
+        class RelationshipEvidence {
+            +f32 nameSimilarity
+            +f32 typeCompatibility
+            +f32 valueContainment
+            +f32 targetUniqueness
+            +u64 orphanCount
+        }
+
+        class Cardinality {
+            <<enumeration>>
+            ONE_TO_ONE
+            MANY_TO_ONE
+            MANY_TO_MANY
+        }
+
+        class RelationshipStatus {
+            <<enumeration>>
+            SUGGESTED
+            ACCEPTED
+            REJECTED
+        }
+    }
+
+    CsvInputFile --> UploadStatus
+    AnalysisStore o-- CsvInputFile
+    AnalysisStore --> UploadClient
+    UploadClient ..> UploadController : HTTP multipart / JSON
+
+    UploadController --> UploadPolicy
+    UploadController --> AnalysisService
+    UploadController ..> ApiError
+
+    AnalysisService --> AnalysisJob
+    AnalysisJob --> JobStatus
+    AnalysisService --> FileStorage
+    AnalysisService --> CsvAnalyzer
+    AnalysisService --> KeyDetector
+    AnalysisService --> RelationshipDetector
+    AnalysisService --> AnalysisResult
+
+    FileStorage <|.. TemporaryFileStorage
+    TemporaryFileStorage --> StoredCsv
+    CsvAnalyzer <|.. PolarsCsvAnalyzer
+    PolarsCsvAnalyzer --> SchemaProfiler
+    PolarsCsvAnalyzer ..> StoredCsv
+
+    SchemaProfiler --> ColumnProfile
+    KeyDetector --> CandidateKey
+    KeyDetector ..> TableProfile
+    RelationshipDetector --> ConfidenceScorer
+    RelationshipDetector --> RelationshipSuggestion
+    RelationshipDetector ..> TableProfile
+
+    AnalysisResult *-- TableProfile
+    AnalysisResult *-- RelationshipSuggestion
+    TableProfile *-- ColumnProfile
+    TableProfile *-- CandidateKey
+    ColumnProfile --> InferredType
+    RelationshipSuggestion *-- RelationshipEvidence
+    RelationshipSuggestion *-- ColumnReference
+    RelationshipSuggestion --> Cardinality
+    RelationshipSuggestion --> RelationshipStatus
+```
