@@ -13,4 +13,18 @@
   --color-studio-accent-soft: #27351f;
 
   --color-studio-warning: #f1bf64;
+
+  --animate-ripple: ripple 600ms ease-out forwards;
+
+    @keyframes ripple {
+      from {
+        transform: scale(0);
+        opacity: 0.4;
+      }
+
+      to {
+        transform: scale(1);
+        opacity: 0;
+      }
+    }
 }
