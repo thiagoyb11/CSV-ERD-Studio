@@ -1,14 +1,25 @@
-import { useRef, useState, type ChangeEvent } from 'react'
+import { useRef, useState, type ChangeEvent, type DragEvent } from 'react'
 import Button from './Button'
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://127.0.0.1:3000'
 
-export default function FileDropzone() {
-  const [selectedFile, setSelectedFile] = useState<File | null>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
+export default function FileDropzone({ onFileUpload }: { onFileUpload: (files: File[]) => void }) {
+  const [dragging, setDragging] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleDrop = (event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    setDragging(false);
+
+    const droppedFiles = Array.from(event.dataTransfer.files).filter((file) => file.name.toLowerCase().endsWith('.csv'))
+
+    onFileUpload(droppedFiles);
+  }
 
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     if (event.target.files?.length) {
+      onFileUpload(Array.from(event.target.files))
       setSelectedFile(event.target.files[0])
     }
   }
@@ -35,13 +46,17 @@ export default function FileDropzone() {
       if (!response.ok) {
         throw new Error(`Upload failed with status ${response.status}`)
       }
+
     } catch (error) {
       console.error('Upload failed:', error)
     }
   }
 
   return (
-    <div className="mx-20 flex h-[400px] border-white border-2 border-dotted w-full max-w-[800px] flex-col items-center gap-2.5 rounded-2xl border border-studio-border bg-studio-raised pt-12 text-center text-white">
+    <div onDragOver={(event) => {
+      event.preventDefault()
+      setDragging(true)
+    }} onDragLeave={() => setDragging(false)} onDrop={handleDrop} className={`${dragging ? 'border-studio-accent bg-studio-accent-soft' : 'border-studio-border bg-studio-raised'} mx-20 flex h-[400px] outline-dotted outline-2 w-full max-w-[800px] flex-col items-center gap-2.5 rounded-2xl bg-studio-raised pt-12 text-center text-white`}>
       <div className="text-studio-accent w-20 h-20 rounded-full align-center text-center bg-studio-accent-soft py-5 px-5">
         <svg
           className="mx-auto"
@@ -67,10 +82,11 @@ export default function FileDropzone() {
         ref={fileInputRef}
         onChange={handleFileChange}
         accept=".csv, text/csv"
+        multiple
         className="sr-only"
       />
       <p className="px-20 text-gray-400">Arrastrá una carpeta o seleccioná varios archivos. Se validan primero y después aparece el diagrama.</p>
-      <Button text="Seleccionar archivos CSV" onClick={handleUpload} />
+      <Button onClick={() => fileInputRef.current?.click()}>Seleccionar archivos CSV</Button>
 
       {selectedFile && (
         <div>
