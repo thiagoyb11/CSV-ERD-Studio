@@ -1,8 +1,12 @@
-import { useState } from 'react'
 import FileCard from './FileCard'
 
-export default function FileList({ files }: { files: File[] }) {
-  const [selectedIndex, setSelectedIndex] = useState(0)
+interface FileListProps {
+  files: File[]
+  selectedIndex: number
+  onSelect: (index: number) => void
+}
+
+export default function FileList({ files, selectedIndex, onSelect }: FileListProps) {
   const totalSize = files.reduce((total, file) => total + file.size, 0)
 
   return (
@@ -27,7 +31,7 @@ export default function FileList({ files }: { files: File[] }) {
             key={`${file.name}-${file.lastModified}-${index}`}
             file={file}
             selected={selectedIndex === index}
-            onClick={() => setSelectedIndex(index)}
+            onClick={() => onSelect(index)}
           />
         ))}
       </div>

@@ -1,54 +1,25 @@
 import { useRef, useState, type ChangeEvent, type DragEvent } from 'react'
 import Button from './Button'
 
-const API_URL = import.meta.env.VITE_API_URL ?? 'http://127.0.0.1:3000'
-
 export default function FileDropzone({ onFileUpload }: { onFileUpload: (files: File[]) => void }) {
   const [dragging, setDragging] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const selectCsvFiles = (files: File[]) => {
+    const csvFiles = files.filter((file) => file.name.toLowerCase().endsWith('.csv'))
+    if (csvFiles.length > 0) onFileUpload(csvFiles)
+  }
 
   const handleDrop = (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     setDragging(false);
 
-    const droppedFiles = Array.from(event.dataTransfer.files).filter((file) => file.name.toLowerCase().endsWith('.csv'))
-
-    onFileUpload(droppedFiles);
+    selectCsvFiles(Array.from(event.dataTransfer.files));
   }
 
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     if (event.target.files?.length) {
-      onFileUpload(Array.from(event.target.files))
-      setSelectedFile(event.target.files[0])
-    }
-  }
-
-  const handleCancelFile = () => {
-    setSelectedFile(null)
-    if (fileInputRef.current) {
-      fileInputRef.current.value = ''
-    }
-  }
-
-  const handleUpload = async () => {
-    if (!selectedFile) return
-
-    const formData = new FormData()
-    formData.append('file', selectedFile)
-
-    try {
-      const response = await fetch(`${API_URL}/upload`, {
-        method: 'POST',
-        body: formData,
-      })
-
-      if (!response.ok) {
-        throw new Error(`Upload failed with status ${response.status}`)
-      }
-
-    } catch (error) {
-      console.error('Upload failed:', error)
+      selectCsvFiles(Array.from(event.target.files))
     }
   }
 
@@ -87,18 +58,6 @@ export default function FileDropzone({ onFileUpload }: { onFileUpload: (files: F
       />
       <p className="px-20 text-gray-400">Arrastrá una carpeta o seleccioná varios archivos. Se validan primero y después aparece el diagrama.</p>
       <Button onClick={() => fileInputRef.current?.click()}>Seleccionar archivos CSV</Button>
-
-      {selectedFile && (
-        <div>
-          <p>Selected: <strong>{selectedFile.name}</strong> ({(selectedFile.size / 1024).toFixed(1)} KB)</p>
-          <div style={{ display: 'flex', gap: '5px' }}>
-            <button onClick={handleUpload}>Submit File</button>
-            <button onClick={handleCancelFile} style={{ backgroundColor: '#ff4d4d', color: '#fff' }}>
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

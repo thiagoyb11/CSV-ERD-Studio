@@ -24,7 +24,7 @@ export interface ColumnSchema {
   nullable: boolean
   uniqueCount: number
   nullCount: number
-  sampleValues: unknown[]
+  sampleValues: string[]
   isPrimaryKeyCandidate: boolean
 }
 
@@ -33,7 +33,7 @@ export interface RelationshipSuggestion {
   sourceColumn: string
   targetTable: string
   targetColumn: string
-  cardinality: 'one-to-one' | 'many-to-one' | 'many-to-many'
+  cardinality: 'one-to-one' | 'many-to-one' | 'many-to-many' | 'one-to-many'
   confidence: number
   status: 'suggested' | 'accepted' | 'rejected'
 }
