@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import DataTable from '../components/DataTable'
 import FileList from '../components/FileList'
 import type { AnalysisResult } from '../types/schema'
+import { Mermaid } from '../components/Mermaid'
 
 const API_URL = import.meta.env.VITE_API_URL ?? ''
 
@@ -62,15 +63,16 @@ export default function Explorer({ files, onAnalysisReady }: ExplorerProps) {
     <section className="flex w-full flex-1 flex-col overflow-hidden border-t border-studio-border sm:flex-row">
       <FileList files={files} selectedIndex={selectedIndex} onSelect={setSelectedIndex} />
 
-      <div className="grid min-h-full min-w-0 w-full place-items-center bg-studio-shell p-6 text-center">
-        <div id="visualizador" className="h-full w-full items-center flex flex-col">
-          <div className="bg-studio-panel h-full w-full">
-            <p className="text-sm font-medium text-studio-text">Área de visualización</p>
-            <p className="mt-2 text-xs text-studio-muted">El diagrama se mostrará en este espacio.</p>
-          </div>
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-auto bg-studio-shell p-6 text-center">
+        <div id="visualizador" className="min-h-80 w-full overflow-auto bg-studio-panel">
+          {!analysis && !error && (
+            <p className="p-6 text-sm text-studio-muted">Analizando {files.length} archivos…</p>
+          )}
+          {error && <p className="p-6 text-sm text-red-400">{error}</p>}
+          {analysis && <Mermaid analysis={analysis} />}
         </div>
 
-        <div className="mx-auto h-full w-full bg-studio-panel p-4 text-white">
+        <div className="mx-auto w-full bg-studio-panel p-4 text-white">
           {!analysis && !error && (
             <p className="text-sm text-studio-muted">Analizando {files.length} archivos…</p>
           )}
