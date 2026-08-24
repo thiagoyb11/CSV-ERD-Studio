@@ -480,6 +480,7 @@ name = "csv-erd-studio-backend"
 version = "0.1.0"
 dependencies = [
  "axum",
+ "chrono",
  "polars",
  "serde",
  "singularize",
@@ -1498,6 +1499,7 @@ dependencies = [
  "polars-lazy",
  "polars-ops",
  "polars-sql",
+ "polars-time",
  "polars-utils",
  "version_check",
 ]
@@ -1745,6 +1747,7 @@ dependencies = [
  "polars-error",
  "polars-parquet",
  "polars-schema",
+ "polars-time",
  "polars-utils",
  "rand",
  "rayon",

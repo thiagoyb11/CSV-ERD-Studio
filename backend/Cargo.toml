@@ -6,7 +6,8 @@ edition = "2024"
 [dependencies]
 singularize = { version = "0.1.0" }
 axum = { version = "0.8.9", features = ["multipart"] }
-polars = { version = "0.55.2", default-features = false, features = ["csv", "lazy"] }
+chrono = { version = "0.4.45", default-features = false }
+polars = { version = "0.55.2", default-features = false, features = ["csv", "lazy", "dtype-date", "dtype-datetime"] }
 serde = { version = "1.0.229", features = ["derive"] }
 tokio = { version = "1.53.1", features = ["macros", "rt-multi-thread"] }
 tower-http = { version = "0.6.11", features = ["cors"] }

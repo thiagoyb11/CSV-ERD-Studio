@@ -13,6 +13,7 @@ interface FileListProps {
 
 export default function FileList({ files, selectedIndex, onSelect }: FileListProps) {
   const [width, setWidth] = useState(DEFAULT_WIDTH)
+  const [search, setSearch] = useState<string>("")
   const [resizing, setResizing] = useState(false)
   const drag = useRef<{ pointerId: number; startX: number; startWidth: number } | null>(null)
   const totalSize = files.reduce((total, file) => total + file.size, 0)
@@ -60,23 +61,29 @@ export default function FileList({ files, selectedIndex, onSelect }: FileListPro
       className="relative flex w-full shrink-0 flex-col border-b border-studio-border bg-studio-panel text-left sm:w-[var(--sidebar-width)] sm:border-b-0 sm:border-r"
       style={{ '--sidebar-width': `${width}px` } as CSSProperties}
     >
-      <header className="flex items-center justify-between border-b border-studio-border px-4 py-4">
-        <div>
-          <span className="block text-[10px] font-medium uppercase tracking-[0.12em] text-studio-muted">
-            Archivos
+      <header className="flex flex-col justify-between border-b border-studio-border px-4 py-4">
+        <div className="flex w-full justify-between flex-row">
+          <div>
+            <span className="block text-[10px] font-medium uppercase tracking-[0.12em] text-studio-muted">
+              Archivos
+            </span>
+            <strong className="mt-1 block text-sm font-medium text-studio-text">
+              Tablas cargadas
+            </strong>
+          </div>
+          <span className="my-auto justify-end min-w-6 place-items-center rounded-full bg-studio-accent-soft px-2 py-1 text-[10px] font-medium text-studio-accent">
+            {files.length}
           </span>
-          <strong className="mt-1 block text-sm font-medium text-studio-text">
-            Tablas cargadas
-          </strong>
         </div>
-        <span className="grid min-w-6 place-items-center rounded-full bg-studio-accent-soft px-2 py-1 text-[10px] font-medium text-studio-accent">
-          {files.length}
-        </span>
+        <input onChange={(e) => {setSearch(e.target.value)}} type="search" className="w-full focus:outline-none focus:border-studio-accent transition-all duration-300 mx-1 bg-studio-raised rounded-lg py-1 px-4 mt-2 text-white" placeholder="Buscar tablas: ">
+
+        </input>
       </header>
 
       <div className="grid max-h-72 gap-1.5 overflow-y-auto p-2 sm:max-h-[calc(100vh-200px)]">
         {files.map((file, index) => (
           <FileCard
+            searchState={search}
             key={`${file.name}-${file.lastModified}-${index}`}
             file={file}
             selected={selectedIndex === index}

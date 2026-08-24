@@ -60,11 +60,11 @@ export default function Explorer({ files, onAnalysisReady }: ExplorerProps) {
   const selectedTable = analysis?.tables[selectedIndex]
 
   return (
-    <section className="flex w-full flex-1 flex-col overflow-hidden border-t border-studio-border sm:flex-row">
+    <section className="flex min-h-0 w-full flex-1 flex-col overflow-hidden border-t border-studio-border sm:flex-row">
       <FileList files={files} selectedIndex={selectedIndex} onSelect={setSelectedIndex} />
 
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-auto bg-studio-shell p-6 text-center">
-        <div id="visualizador" className="min-h-80 w-full overflow-auto bg-studio-panel">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 overflow-hidden bg-studio-shell p-2 text-center">
+        <div id="visualizador" className="min-h-0 h-full flex-1 border-studio-border border overflow-hidden bg-studio-panel">
           {!analysis && !error && (
             <p className="p-6 text-sm text-studio-muted">Analizando {files.length} archivos…</p>
           )}
@@ -72,7 +72,7 @@ export default function Explorer({ files, onAnalysisReady }: ExplorerProps) {
           {analysis && <Mermaid analysis={analysis} />}
         </div>
 
-        <div className="mx-auto w-full bg-studio-panel p-4 text-white">
+        <div className="mx-auto border-studio-border border flex min-h-0 w-full flex-1 flex-col overflow-hidden bg-studio-panel p-4 text-white">
           {!analysis && !error && (
             <p className="text-sm text-studio-muted">Analizando {files.length} archivos…</p>
           )}

@@ -28,7 +28,11 @@ export default function App() {
   }
 
   return (
-    <main className="items-center flex flex-col gap-5 min-h-screen bg-studio-shell text-center text-black">
+    <main
+      className={`flex flex-col items-center bg-studio-shell text-center text-black ${
+        page === 'explorer' ? 'h-screen overflow-hidden' : 'min-h-screen gap-5'
+      }`}
+    >
       <Menu onNewAnalysis={handleNewAnalysis} />
       {page === 'landing' && (
         <>

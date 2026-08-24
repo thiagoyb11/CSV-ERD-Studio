@@ -87,12 +87,13 @@ export default function DataTable({ analysisId, table }: DataTableProps) {
   if (error) return <p className="text-sm text-red-400">{error}</p>
 
   return (
-    <div className="w-full">
+    <div className="flex h-full min-h-0 w-full flex-col">
+      <h1 className="mx-auto font-mono text-gray-300">{table.name}.csv</h1>
       <p className="mb-3 text-left text-sm text-studio-muted">
-        {table.rowCount} filas · {table.columns.length} columnas · {rows.length} cargadas
+        {table.rowCount} filas · {table.columns.length} columnas
       </p>
 
-      <div className="max-h-[32rem] overflow-auto" onScroll={handleScroll}>
+      <div className="min-h-0 flex-1 overflow-auto" onScroll={handleScroll}>
         <table className="w-full text-left text-sm">
           <thead className="sticky top-0 z-10 bg-studio-panel">
             <tr>
@@ -105,7 +106,7 @@ export default function DataTable({ analysisId, table }: DataTableProps) {
           </thead>
           <tbody>
             {rows.map((row, rowIndex) => (
-              <tr key={rowIndex}>
+              <tr key={rowIndex} className="hover:bg-studio-raised transition-all duration-200">
                 {row.map((value, columnIndex) => (
                   <td
                     className="border-b border-studio-border/50 p-2"

@@ -1,11 +1,17 @@
 use std::{io::Cursor, path::Path};
 
+use chrono::{DateTime, NaiveDate, NaiveDateTime};
 use polars::prelude::*;
 
 use crate::schema::{ColumnSchema, InferredType, TableSchema};
 
 pub fn analyze_csv(file_name: &str, bytes: Vec<u8>) -> PolarsResult<(TableSchema, DataFrame)> {
-    let dataframe = CsvReader::new(Cursor::new(bytes)).finish()?;
+    // Las fechas se mantienen como texto para aceptar columnas que mezclen
+    // formatos válidos, por ejemplo YYYY-MM-DD y M/D/YYYY.
+    let dataframe = CsvReadOptions::default()
+        .with_low_memory(true)
+        .into_reader_with_file_handle(Cursor::new(bytes))
+        .finish()?;
     let row_count = dataframe.height();
     let table_name = Path::new(file_name)
         .file_stem()
@@ -47,7 +53,7 @@ fn profile_column(column: &Column, table_id: &str, row_count: usize) -> PolarsRe
     Ok(ColumnSchema {
         id: format!("{table_id}.{}", identifier(&name)),
         name,
-        inferred_type: inferred_type(column.dtype()),
+        inferred_type: inferred_type(column),
         nullable: null_count > 0,
         unique_count,
         null_count,
@@ -82,8 +88,8 @@ fn sample_value(value: AnyValue<'_>) -> String {
     }
 }
 
-fn inferred_type(data_type: &DataType) -> InferredType {
-    match data_type {
+fn inferred_type(column: &Column) -> InferredType {
+    match column.dtype() {
         DataType::Boolean => InferredType::Boolean,
         DataType::Int8
         | DataType::Int16
@@ -94,7 +100,7 @@ fn inferred_type(data_type: &DataType) -> InferredType {
         | DataType::UInt32
         | DataType::UInt64 => InferredType::Integer,
         DataType::Float32 | DataType::Float64 => InferredType::Decimal,
-        DataType::String => InferredType::String,
+        DataType::String => infer_string_type(column),
         DataType::Null => InferredType::Empty,
         other => match other.to_string().to_lowercase().as_str() {
             "date" => InferredType::Date,
@@ -102,6 +108,62 @@ fn inferred_type(data_type: &DataType) -> InferredType {
             _ => InferredType::Mixed,
         },
     }
+}
+
+fn infer_string_type(column: &Column) -> InferredType {
+    let mut has_value = false;
+    let mut all_dates = true;
+    let mut all_datetimes = true;
+
+    for value in column.as_materialized_series().iter() {
+        let value = match value {
+            AnyValue::Null => continue,
+            AnyValue::String(value) => value.trim(),
+            AnyValue::StringOwned(ref value) => value.trim(),
+            _ => return InferredType::String,
+        };
+
+        if value.is_empty() {
+            continue;
+        }
+
+        has_value = true;
+        all_dates &= is_supported_date(value);
+        all_datetimes &= is_supported_datetime(value);
+
+        if !all_dates && !all_datetimes {
+            return InferredType::String;
+        }
+    }
+
+    if !has_value {
+        InferredType::Empty
+    } else if all_dates {
+        InferredType::Date
+    } else if all_datetimes {
+        InferredType::Datetime
+    } else {
+        InferredType::String
+    }
+}
+
+fn is_supported_date(value: &str) -> bool {
+    ["%Y-%m-%d", "%m/%d/%Y", "%Y/%m/%d"]
+        .iter()
+        .any(|format| NaiveDate::parse_from_str(value, format).is_ok())
+}
+
+fn is_supported_datetime(value: &str) -> bool {
+    DateTime::parse_from_rfc3339(value).is_ok()
+        || [
+            "%Y-%m-%d %H:%M:%S",
+            "%Y-%m-%d %H:%M:%S%.f",
+            "%Y-%m-%dT%H:%M:%S",
+            "%Y-%m-%dT%H:%M:%S%.f",
+            "%m/%d/%Y %H:%M:%S",
+        ]
+        .iter()
+        .any(|format| NaiveDateTime::parse_from_str(value, format).is_ok())
 }
 
 fn identifier(value: &str) -> String {
@@ -150,5 +212,28 @@ mod tests {
         assert_eq!(page.len(), 100);
         assert_eq!(page[0], ["100", "user-100"]);
         assert_eq!(page[99], ["199", "user-199"]);
+    }
+
+    #[test]
+    fn detects_iso_dates() {
+        let csv = b"created_at\n2026-08-24\n2026-08-25\n".to_vec();
+
+        let (table, _) = analyze_csv("events.csv", csv).expect("CSV should be valid");
+
+        assert_eq!(table.columns[0].inferred_type, InferredType::Date);
+    }
+
+    #[test]
+    fn detects_columns_with_mixed_date_formats() {
+        let csv = b"last_updated\n2023-07-18\n7/19/2023\n".to_vec();
+
+        let (table, dataframe) =
+            analyze_csv("updates.csv", csv).expect("mixed date formats should be valid");
+
+        assert_eq!(table.columns[0].inferred_type, InferredType::Date);
+        assert_eq!(
+            dataframe.column("last_updated").unwrap().dtype(),
+            &DataType::String
+        );
     }
 }

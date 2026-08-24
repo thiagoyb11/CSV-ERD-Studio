@@ -15,6 +15,7 @@ use axum::{
 use polars::prelude::DataFrame;
 use serde::{Deserialize, Serialize};
 use singularize::singularize;
+use tokio::task::JoinSet;
 use tower_http::cors::CorsLayer;
 
 use crate::{
@@ -26,9 +27,13 @@ type ApiError = (StatusCode, String);
 
 // El límite incluye todos los archivos y la metadata del multipart.
 const MAX_CSV_SIZE: usize = 300 * 1024 * 1024;
+const MAX_SINGLE_CSV_SIZE: usize = 100 * 1024 * 1024;
+// Polars ya paraleliza internamente un CSV; procesar varios archivos grandes a
+// la vez solo multiplica el pico de memoria de los DataFrames temporales.
+const MAX_CONCURRENT_PARSERS: usize = 1;
 const DEFAULT_PAGE_SIZE: usize = 100;
 const MAX_PAGE_SIZE: usize = 500;
-const MAX_ACTIVE_ANALYSES: usize = 2;
+const MAX_ACTIVE_ANALYSES: usize = 1;
 
 // Cada tabla conserva sus datos y el perfil derivado del CSV original.
 struct LoadedTable {
@@ -36,9 +41,17 @@ struct LoadedTable {
     dataframe: DataFrame,
 }
 
+// Mantiene el orden del formulario aunque los parseos terminen en otro orden.
+struct ParsedCsv {
+    index: usize,
+    schema: TableSchema,
+    dataframe: DataFrame,
+}
+
 // La sesión agrupa todos los archivos necesarios para detectar relaciones.
 struct AnalysisSession {
     tables: HashMap<String, LoadedTable>,
+    table_order: Vec<String>,
     relationships: Vec<RelationshipSuggestion>,
 }
 
@@ -92,8 +105,22 @@ async fn create_analysis(
     State(state): State<SharedState>,
     mut multipart: Multipart,
 ) -> Result<Json<AnalysisResult>, ApiError> {
-    let mut tables = HashMap::new();
-    let mut table_schemas = Vec::new();
+    // La aplicación trabaja con un análisis visible a la vez. Liberar la sesión
+    // anterior antes del upload deja toda la memoria disponible para el nuevo.
+    {
+        let mut analyses = state
+            .analyses
+            .write()
+            .map_err(|_| internal_error("No se pudo preparar el nuevo análisis"))?;
+        if analyses.len() >= MAX_ACTIVE_ANALYSES {
+            analyses.clear();
+        }
+    }
+
+    let mut parser_jobs = JoinSet::new();
+    let mut parsed_files = Vec::new();
+    let mut parser_error = None;
+    let mut file_index = 0;
 
     while let Some(field) = multipart.next_field().await.map_err(bad_multipart)? {
         if field.name() != Some("files") {
@@ -112,41 +139,95 @@ async fn create_analysis(
             ));
         }
 
-        let bytes = field.bytes().await.map_err(bad_multipart)?.to_vec();
-        let (schema, dataframe) = analyze_csv(&file_name, bytes).map_err(|error| {
-            (
-                StatusCode::UNPROCESSABLE_ENTITY,
-                format!("No se pudo analizar {file_name}: {error}"),
-            )
-        })?;
+        let bytes = read_csv_field(field, &file_name).await?;
+        let index = file_index;
+        file_index += 1;
 
-        if tables.contains_key(&schema.id) {
-            return Err((
-                StatusCode::CONFLICT,
-                format!("Hay más de un archivo para la tabla {}", schema.name),
-            ));
+        parser_jobs.spawn_blocking(move || {
+            let (schema, dataframe) = analyze_csv(&file_name, bytes)
+                .map_err(|error| (file_name.clone(), error.to_string()))?;
+            Ok::<_, (String, String)>(ParsedCsv {
+                index,
+                schema,
+                dataframe,
+            })
+        });
+
+        // La cola está acotada para no retener bytes de varios CSV grandes.
+        if parser_jobs.len() >= MAX_CONCURRENT_PARSERS {
+            if let Err(error) = collect_parser_job(&mut parser_jobs, &mut parsed_files).await
+                && parser_error.is_none()
+            {
+                parser_error = Some(error);
+            }
         }
-
-        // El frontend recibe solo metadata; los valores quedan en el DataFrame.
-        table_schemas.push(schema.clone());
-        tables.insert(schema.id.clone(), LoadedTable { schema, dataframe });
     }
 
-    if tables.is_empty() {
+    while !parser_jobs.is_empty() {
+        if let Err(error) = collect_parser_job(&mut parser_jobs, &mut parsed_files).await
+            && parser_error.is_none()
+        {
+            parser_error = Some(error);
+        }
+    }
+
+    // La petición se consume completa antes de responder. Si se devuelve durante
+    // el upload, algunos navegadores muestran un reset de red y ocultan el error.
+    if let Some(error) = parser_error {
+        return Err(error);
+    }
+
+    if parsed_files.is_empty() {
         return Err((
             StatusCode::BAD_REQUEST,
             "No se proporcionaron archivos CSV".to_string(),
         ));
     }
 
-    let analysis_id = state.next_analysis_id.fetch_add(1, Ordering::Relaxed) + 1;
-    let mut session = AnalysisSession {
-        tables,
-        relationships: Vec::new(),
-    };
+    parsed_files.sort_by_key(|file| file.index);
+    let mut tables = HashMap::with_capacity(parsed_files.len());
+    let mut table_schemas = Vec::with_capacity(parsed_files.len());
+    let mut table_order = Vec::with_capacity(parsed_files.len());
 
-    // Las tablas ya están en memoria; esta función no vuelve a leer los CSV.
-    detect_relationships(&mut session);
+    for parsed in parsed_files {
+        if tables.contains_key(&parsed.schema.id) {
+            return Err((
+                StatusCode::CONFLICT,
+                format!("Hay más de un archivo para la tabla {}", parsed.schema.name),
+            ));
+        }
+
+        // El frontend recibe solo metadata; los valores quedan en el DataFrame.
+        table_schemas.push(parsed.schema.clone());
+        table_order.push(parsed.schema.id.clone());
+        tables.insert(
+            parsed.schema.id.clone(),
+            LoadedTable {
+                schema: parsed.schema,
+                dataframe: parsed.dataframe,
+            },
+        );
+    }
+
+    let analysis_id = state.next_analysis_id.fetch_add(1, Ordering::Relaxed) + 1;
+    // Polars y la comparación de columnas son CPU-intensivos: nunca deben bloquear Axum.
+    let session = tokio::task::spawn_blocking(move || {
+        let mut session = AnalysisSession {
+            tables,
+            table_order,
+            relationships: Vec::new(),
+        };
+        detect_relationships(&mut session)?;
+        Ok::<_, String>(session)
+    })
+    .await
+    .map_err(|error| {
+        internal_error(&format!(
+            "La detección de relaciones terminó inesperadamente: {error}"
+        ))
+    })?
+    .map_err(|error| internal_error(&format!("No se pudieron detectar relaciones: {error}")))?;
+
     let relationships = session.relationships.clone();
 
     let mut analyses = state
@@ -169,6 +250,29 @@ async fn create_analysis(
     }))
 }
 
+async fn collect_parser_job(
+    parser_jobs: &mut JoinSet<Result<ParsedCsv, (String, String)>>,
+    parsed_files: &mut Vec<ParsedCsv>,
+) -> Result<(), ApiError> {
+    let completed = parser_jobs
+        .join_next()
+        .await
+        .ok_or_else(|| internal_error("No había ningún parseo pendiente"))?
+        .map_err(|error| {
+            internal_error(&format!("El analizador terminó inesperadamente: {error}"))
+        })?;
+
+    let parsed = completed.map_err(|(file_name, error)| {
+        (
+            StatusCode::UNPROCESSABLE_ENTITY,
+            format!("No se pudo analizar {file_name}: {error}"),
+        )
+    })?;
+    parsed_files.push(parsed);
+
+    Ok(())
+}
+
 fn names_are_related(
     table1: &TableSchema,
     table2: &TableSchema,
@@ -178,7 +282,7 @@ fn names_are_related(
     let col1_name = col1.name.as_str();
     let col2_name = col2.name.as_str();
 
-    if !((col1.null_count == col2.null_count) && col1.null_count == 0) {
+    if col1.null_count != 0 || col2.null_count != 0 {
         return false;
     }
 
@@ -186,8 +290,12 @@ fn names_are_related(
         return false;
     }
 
-    if col1_name == col2_name || col1.inferred_type != col2.inferred_type {
+    if col1.inferred_type != col2.inferred_type {
         return false;
+    }
+
+    if col1_name == col2_name {
+        return col1_name != "id";
     }
 
     let table1_name = singularize(&table1.name);
@@ -208,7 +316,7 @@ fn names_are_related(
     false
 }
 
-fn detect_relationships(session: &mut AnalysisSession) -> () {
+fn detect_relationships(session: &mut AnalysisSession) -> Result<(), String> {
     let tables = session.tables.values().collect::<Vec<_>>();
 
     // Se compara cada par de tablas una sola vez, sin volver a parsear archivos.
@@ -216,6 +324,7 @@ fn detect_relationships(session: &mut AnalysisSession) -> () {
         for j in (i + 1)..tables.len() {
             let table1 = tables[i];
             let table2 = tables[j];
+            let mut column_values = HashMap::<String, HashSet<String>>::new();
 
             for col1 in &table1.schema.columns {
                 for col2 in &table2.schema.columns {
@@ -223,24 +332,16 @@ fn detect_relationships(session: &mut AnalysisSession) -> () {
                         continue;
                     }
 
-                    // Pendiente: comprobar con ambos DataFrames si los valores de una
-                    // columna son subconjunto de la otra y construir la sugerencia.
-                    let col1_hash: HashSet<String> = table1
-                        .dataframe
-                        .column(&col1.name)
-                        .expect("No se encontró columna con ese nombre")
-                        .as_materialized_series()
-                        .iter()
-                        .map(|value| value.to_string())
-                        .collect();
-                    let col2_hash: HashSet<String> = table2
-                        .dataframe
-                        .column(&col2.name)
-                        .expect("No se encontró columna con ese nombre")
-                        .as_materialized_series()
-                        .iter()
-                        .map(|value| value.to_string())
-                        .collect();
+                    // Cada HashSet se construye una vez por columna candidata dentro
+                    // de este par de tablas y se libera antes del siguiente par.
+                    cache_column_values(&mut column_values, table1, col1)?;
+                    cache_column_values(&mut column_values, table2, col2)?;
+                    let col1_hash = column_values.get(&col1.id).ok_or_else(|| {
+                        format!("No se pudieron guardar los valores de {}", col1.name)
+                    })?;
+                    let col2_hash = column_values.get(&col2.id).ok_or_else(|| {
+                        format!("No se pudieron guardar los valores de {}", col2.name)
+                    })?;
 
                     let (source_table, source_column, target_table, target_column) =
                         if col1_hash.is_subset(&col2_hash) {
@@ -290,6 +391,35 @@ fn detect_relationships(session: &mut AnalysisSession) -> () {
             }
         }
     }
+
+    Ok(())
+}
+
+fn cache_column_values(
+    values_by_column: &mut HashMap<String, HashSet<String>>,
+    table: &LoadedTable,
+    column: &ColumnSchema,
+) -> Result<(), String> {
+    if values_by_column.contains_key(&column.id) {
+        return Ok(());
+    }
+
+    let values = table
+        .dataframe
+        .column(&column.name)
+        .map_err(|error| {
+            format!(
+                "No se encontró {} en {}: {error}",
+                column.name, table.schema.name
+            )
+        })?
+        .as_materialized_series()
+        .iter()
+        .map(|value| value.to_string())
+        .collect();
+
+    values_by_column.insert(column.id.clone(), values);
+    Ok(())
 }
 
 #[derive(Deserialize)]
@@ -305,23 +435,28 @@ async fn get_rows(
     Path((analysis_id, table_id)): Path<(u64, String)>,
     Query(pagination): Query<Pagination>,
 ) -> Result<Json<RowsPage>, ApiError> {
-    let analyses = state
-        .analyses
-        .read()
-        .map_err(|_| internal_error("No se pudo acceder al análisis"))?;
-    let analysis = analyses
-        .get(&analysis_id)
-        .ok_or((StatusCode::NOT_FOUND, "Análisis no encontrado".to_string()))?;
-    let table = analysis
-        .tables
-        .get(&table_id)
-        .ok_or((StatusCode::NOT_FOUND, "Tabla no encontrada".to_string()))?;
+    // DataFrame::clone comparte sus buffers; así la lectura costosa no retiene el lock.
+    let dataframe = {
+        let analyses = state
+            .analyses
+            .read()
+            .map_err(|_| internal_error("No se pudo acceder al análisis"))?;
+        let analysis = analyses
+            .get(&analysis_id)
+            .ok_or((StatusCode::NOT_FOUND, "Análisis no encontrado".to_string()))?;
+        analysis
+            .tables
+            .get(&table_id)
+            .ok_or((StatusCode::NOT_FOUND, "Tabla no encontrada".to_string()))?
+            .dataframe
+            .clone()
+    };
 
     let limit = pagination.limit.clamp(1, MAX_PAGE_SIZE);
-    let rows = dataframe_rows(&table.dataframe, pagination.offset, limit)
+    let rows = dataframe_rows(&dataframe, pagination.offset, limit)
         .map_err(|error| internal_error(&format!("No se pudieron leer las filas: {error}")))?;
     let loaded_until = pagination.offset.saturating_add(rows.len());
-    let next_offset = (loaded_until < table.dataframe.height()).then_some(loaded_until);
+    let next_offset = (loaded_until < dataframe.height()).then_some(loaded_until);
 
     Ok(Json(RowsPage { rows, next_offset }))
 }
@@ -340,8 +475,9 @@ async fn get_analysis(
 
     // La sesión conserva la metadata junto a los DataFrames en memoria.
     let tables = analysis
-        .tables
-        .values()
+        .table_order
+        .iter()
+        .filter_map(|table_id| analysis.tables.get(table_id))
         .map(|table| table.schema.clone())
         .collect();
 
@@ -376,5 +512,24 @@ fn internal_error(message: &str) -> ApiError {
 }
 
 fn bad_multipart(error: axum::extract::multipart::MultipartError) -> ApiError {
-    (StatusCode::BAD_REQUEST, error.to_string())
+    (error.status(), error.body_text())
+}
+
+async fn read_csv_field(
+    mut field: axum::extract::multipart::Field<'_>,
+    file_name: &str,
+) -> Result<Vec<u8>, ApiError> {
+    let mut bytes = Vec::new();
+
+    while let Some(chunk) = field.chunk().await.map_err(bad_multipart)? {
+        if bytes.len().saturating_add(chunk.len()) > MAX_SINGLE_CSV_SIZE {
+            return Err((
+                StatusCode::PAYLOAD_TOO_LARGE,
+                format!("{file_name} supera el máximo de 100 MiB por archivo"),
+            ));
+        }
+        bytes.extend_from_slice(&chunk);
+    }
+
+    Ok(bytes)
 }
