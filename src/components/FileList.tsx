@@ -1,4 +1,9 @@
+import { useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent } from 'react'
 import FileCard from './FileCard'
+
+const DEFAULT_WIDTH = 288
+const MIN_WIDTH = 220
+const MAX_WIDTH = 560
 
 interface FileListProps {
   files: File[]
@@ -7,10 +12,54 @@ interface FileListProps {
 }
 
 export default function FileList({ files, selectedIndex, onSelect }: FileListProps) {
+  const [width, setWidth] = useState(DEFAULT_WIDTH)
+  const [resizing, setResizing] = useState(false)
+  const drag = useRef<{ pointerId: number; startX: number; startWidth: number } | null>(null)
   const totalSize = files.reduce((total, file) => total + file.size, 0)
 
+  const clampWidth = (nextWidth: number) => Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, nextWidth))
+
+  const startResize = (event: PointerEvent<HTMLDivElement>) => {
+    event.preventDefault()
+    event.currentTarget.setPointerCapture(event.pointerId)
+    drag.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startWidth: width,
+    }
+    setResizing(true)
+  }
+
+  const resize = (event: PointerEvent<HTMLDivElement>) => {
+    if (!drag.current || drag.current.pointerId !== event.pointerId) return
+    setWidth(clampWidth(drag.current.startWidth + event.clientX - drag.current.startX))
+  }
+
+  const stopResize = (event: PointerEvent<HTMLDivElement>) => {
+    if (!drag.current || drag.current.pointerId !== event.pointerId) return
+    drag.current = null
+    setResizing(false)
+    event.currentTarget.releasePointerCapture(event.pointerId)
+  }
+
+  const resizeWithKeyboard = (event: KeyboardEvent<HTMLDivElement>) => {
+    const widths: Partial<Record<string, number>> = {
+      ArrowLeft: width - 10,
+      ArrowRight: width + 10,
+      Home: MIN_WIDTH,
+      End: MAX_WIDTH,
+    }
+    const nextWidth = widths[event.key]
+    if (nextWidth === undefined) return
+    event.preventDefault()
+    setWidth(clampWidth(nextWidth))
+  }
+
   return (
-    <aside className="flex w-full shrink-0 flex-col border-b border-studio-border bg-studio-panel text-left sm:w-72 sm:border-b-0 sm:border-r">
+    <aside
+      className="relative flex w-full shrink-0 flex-col border-b border-studio-border bg-studio-panel text-left sm:w-[var(--sidebar-width)] sm:border-b-0 sm:border-r"
+      style={{ '--sidebar-width': `${width}px` } as CSSProperties}
+    >
       <header className="flex items-center justify-between border-b border-studio-border px-4 py-4">
         <div>
           <span className="block text-[10px] font-medium uppercase tracking-[0.12em] text-studio-muted">
@@ -39,6 +88,25 @@ export default function FileList({ files, selectedIndex, onSelect }: FileListPro
       <footer className="mt-auto border-t border-studio-border px-4 py-3 text-[10px] text-studio-muted">
         {formatTotalSize(totalSize)} en total
       </footer>
+
+      <div
+        role="separator"
+        aria-label="Cambiar el ancho del panel de archivos"
+        aria-orientation="vertical"
+        aria-valuemin={MIN_WIDTH}
+        aria-valuemax={MAX_WIDTH}
+        aria-valuenow={width}
+        tabIndex={0}
+        onDoubleClick={() => setWidth(DEFAULT_WIDTH)}
+        onKeyDown={resizeWithKeyboard}
+        onPointerDown={startResize}
+        onPointerMove={resize}
+        onPointerUp={stopResize}
+        onPointerCancel={stopResize}
+        className={`absolute inset-y-0 -right-1 z-20 hidden w-2 cursor-col-resize touch-none after:absolute after:inset-y-0 after:left-1/2 after:w-px after:-translate-x-1/2 after:content-[''] hover:after:bg-studio-accent focus:outline-none focus:after:bg-studio-accent sm:block ${
+          resizing ? 'after:bg-studio-accent' : 'after:bg-transparent'
+        }`}
+      />
     </aside>
   )
 }

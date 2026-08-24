@@ -1,6 +1,6 @@
 use serde::Serialize;
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum InferredType {
     Integer,
@@ -22,7 +22,6 @@ pub struct ColumnSchema {
     pub nullable: bool,
     pub unique_count: usize,
     pub null_count: usize,
-    pub sample_values: Vec<String>,
     pub is_primary_key_candidate: bool,
 }
 
@@ -35,4 +34,31 @@ pub struct TableSchema {
     pub row_count: usize,
     pub columns: Vec<ColumnSchema>,
     pub candidate_keys: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AnalysisResult {
+    pub analysis_id: u64,
+    pub tables: Vec<TableSchema>,
+    pub relationships: Vec<RelationshipSuggestion>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RowsPage {
+    pub rows: Vec<Vec<String>>,
+    pub next_offset: Option<usize>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RelationshipSuggestion {
+    pub source_table: String,
+    pub source_column: String,
+    pub target_table: String,
+    pub target_column: String,
+    pub cardinality: String,
+    pub confidence: f32,
+    pub status: String,
 }

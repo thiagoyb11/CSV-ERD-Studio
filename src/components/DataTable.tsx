@@ -1,74 +1,128 @@
-import { useEffect, useState } from 'react'
-import type { TableSchema } from '../types/schema'
+import { useEffect, useRef, useState, type UIEvent } from 'react'
+import type { RowsPage, TableSchema } from '../types/schema'
 
 const API_URL = import.meta.env.VITE_API_URL ?? ''
+const PAGE_SIZE = 100
+const LOAD_MORE_DISTANCE = 160
 
-export default function DataTable({ file }: { file: File }) {
-  const [data, setData] = useState<TableSchema>()
+async function readJson<T>(response: Response): Promise<T> {
+  if (!response.ok) {
+    throw new Error((await response.text()) || `Error ${response.status}`)
+  }
+
+  return response.json() as Promise<T>
+}
+
+interface DataTableProps {
+  analysisId: number
+  table: TableSchema
+}
+
+export default function DataTable({ analysisId, table }: DataTableProps) {
+  const [rows, setRows] = useState<string[][]>([])
+  const [nextOffset, setNextOffset] = useState<number | null>(null)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const controller = useRef<AbortController | null>(null)
+  const loadingMoreRef = useRef(false)
 
   useEffect(() => {
-    const controller = new AbortController()
-    const formData = new FormData()
-    formData.append('file', file)
+    const requestController = new AbortController()
+    controller.current = requestController
 
-    fetch(`${API_URL}/api/parse`, {
-      method: 'POST',
-      body: formData,
-      signal: controller.signal,
-    })
-      .then(async (response) => {
-        if (!response.ok) {
-          throw new Error((await response.text()) || `Error ${response.status}`)
-        }
-        return response.json() as Promise<TableSchema>
-      })
-      .then(setData)
-      .catch((requestError: unknown) => {
+    // La tabla ya fue parseada: esta petición solo obtiene la primera página.
+    const loadFirstPage = async () => {
+      try {
+        const page = await fetch(
+          `${API_URL}/api/analyses/${analysisId}/tables/${encodeURIComponent(table.id)}/rows?offset=0&limit=${PAGE_SIZE}`,
+          { signal: requestController.signal },
+        ).then(readJson<RowsPage>)
+
+        setRows(page.rows)
+        setNextOffset(page.nextOffset)
+      } catch (requestError) {
         if (requestError instanceof DOMException && requestError.name === 'AbortError') return
-        setError(requestError instanceof Error ? requestError.message : 'No se pudo analizar el CSV')
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setLoading(false)
-      })
+        setError(requestError instanceof Error ? requestError.message : 'No se pudieron cargar las filas')
+      } finally {
+        if (!requestController.signal.aborted) setLoading(false)
+      }
+    }
 
-    return () => controller.abort()
-  }, [file])
+    void loadFirstPage()
+    return () => requestController.abort()
+  }, [analysisId, table.id])
 
-  if (loading) return <p className="text-sm text-studio-muted">Analizando {file?.name}…</p>
+  const loadMore = async () => {
+    if (nextOffset === null || loadingMoreRef.current) return
+
+    loadingMoreRef.current = true
+    setLoadingMore(true)
+
+    try {
+      const page = await fetch(
+        `${API_URL}/api/analyses/${analysisId}/tables/${encodeURIComponent(table.id)}/rows?offset=${nextOffset}&limit=${PAGE_SIZE}`,
+        { signal: controller.current?.signal },
+      ).then(readJson<RowsPage>)
+
+      setRows((currentRows) => [...currentRows, ...page.rows])
+      setNextOffset(page.nextOffset)
+    } catch (requestError) {
+      if (requestError instanceof DOMException && requestError.name === 'AbortError') return
+      setError(requestError instanceof Error ? requestError.message : 'No se pudieron cargar más filas')
+    } finally {
+      loadingMoreRef.current = false
+      setLoadingMore(false)
+    }
+  }
+
+  const handleScroll = (event: UIEvent<HTMLDivElement>) => {
+    const container = event.currentTarget
+    const remaining = container.scrollHeight - container.scrollTop - container.clientHeight
+
+    if (remaining <= LOAD_MORE_DISTANCE) void loadMore()
+  }
+
+  if (loading) return <p className="text-sm text-studio-muted">Cargando {table.fileName}…</p>
   if (error) return <p className="text-sm text-red-400">{error}</p>
-  if (!data) return null
-
-  const sampleCount = Math.max(0, ...data.columns.map((column) => column.sampleValues.length))
 
   return (
-    <div className="w-full overflow-auto">
+    <div className="w-full">
       <p className="mb-3 text-left text-sm text-studio-muted">
-        {data.rowCount} filas · {data.columns.length} columnas
+        {table.rowCount} filas · {table.columns.length} columnas · {rows.length} cargadas
       </p>
-      <table className="w-full text-left text-sm">
-        <thead>
-          <tr>
-            {data.columns.map((column) => (
-              <th className="border-b border-studio-border p-2" key={column.id}>
-                {column.name}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {Array.from({ length: sampleCount }, (_, rowIndex) => (
-            <tr key={rowIndex}>
-              {data.columns.map((column) => (
-                <td className="border-b border-studio-border/50 p-2" key={column.id}>
-                  {column.sampleValues[rowIndex] ?? ''}
-                </td>
+
+      <div className="max-h-[32rem] overflow-auto" onScroll={handleScroll}>
+        <table className="w-full text-left text-sm">
+          <thead className="sticky top-0 z-10 bg-studio-panel">
+            <tr>
+              {table.columns.map((column) => (
+                <th className="border-b border-studio-border p-2" key={column.id}>
+                  {column.name}
+                </th>
               ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {rows.map((row, rowIndex) => (
+              <tr key={rowIndex}>
+                {row.map((value, columnIndex) => (
+                  <td
+                    className="border-b border-studio-border/50 p-2"
+                    key={table.columns[columnIndex]?.id ?? columnIndex}
+                  >
+                    {value}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        {loadingMore && (
+          <p className="p-3 text-center text-xs text-studio-muted">Cargando más filas…</p>
+        )}
+      </div>
     </div>
   )
 }

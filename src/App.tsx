@@ -4,10 +4,12 @@ import Explorer from './pages/Explorer'
 import { useState } from 'react';
 
 type Page = 'landing' | 'explorer';
+const API_URL = import.meta.env.VITE_API_URL ?? ''
 
 export default function App() {
   const [page, setPage] = useState<Page>('landing');
   const [files, setFiles] = useState<File[]>([]);
+  const [analysisId, setAnalysisId] = useState<number | null>(null)
 
   const handleFileUpload = (files: File[]) => {
     setFiles(files);
@@ -15,6 +17,12 @@ export default function App() {
   };
 
   const handleNewAnalysis = () => {
+    // Libera los DataFrames retenidos por el backend antes de empezar otro análisis.
+    if (analysisId !== null) {
+      void fetch(`${API_URL}/api/analyses/${analysisId}`, { method: 'DELETE' })
+    }
+
+    setAnalysisId(null)
     setFiles([]);
     setPage('landing');
   }
@@ -29,7 +37,7 @@ export default function App() {
         </>
       )}
       {page === 'explorer' && (
-        <Explorer files={files} />
+        <Explorer files={files} onAnalysisReady={setAnalysisId} />
       )}
     </main>
   )

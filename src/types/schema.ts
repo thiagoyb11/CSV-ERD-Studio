@@ -24,8 +24,18 @@ export interface ColumnSchema {
   nullable: boolean
   uniqueCount: number
   nullCount: number
-  sampleValues: string[]
   isPrimaryKeyCandidate: boolean
+}
+
+export interface AnalysisResult {
+  analysisId: number
+  tables: TableSchema[]
+  relationships: RelationshipSuggestion[]
+}
+
+export interface RowsPage {
+  rows: string[][]
+  nextOffset: number | null
 }
 
 export interface RelationshipSuggestion {
