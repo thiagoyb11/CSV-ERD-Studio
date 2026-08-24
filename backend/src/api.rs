@@ -146,7 +146,7 @@ async fn create_analysis(
     };
 
     // Las tablas ya están en memoria; esta función no vuelve a leer los CSV.
-    session.relationships = detect_relationships(&session);
+    detect_relationships(&mut session);
     let relationships = session.relationships.clone();
 
     let mut analyses = state
@@ -208,9 +208,8 @@ fn names_are_related(
     false
 }
 
-fn detect_relationships(session: &AnalysisSession) -> Vec<RelationshipSuggestion> {
+fn detect_relationships(session: &mut AnalysisSession) -> () {
     let tables = session.tables.values().collect::<Vec<_>>();
-    let relationships = Vec::new();
 
     // Se compara cada par de tablas una sola vez, sin volver a parsear archivos.
     for i in 0..tables.len() {
@@ -229,7 +228,7 @@ fn detect_relationships(session: &AnalysisSession) -> Vec<RelationshipSuggestion
                     let col1_hash: HashSet<String> = table1
                         .dataframe
                         .column(&col1.name)
-                        .expect("")
+                        .expect("No se encontró columna con ese nombre")
                         .as_materialized_series()
                         .iter()
                         .map(|value| value.to_string())
@@ -237,17 +236,60 @@ fn detect_relationships(session: &AnalysisSession) -> Vec<RelationshipSuggestion
                     let col2_hash: HashSet<String> = table2
                         .dataframe
                         .column(&col2.name)
-                        .expect("")
+                        .expect("No se encontró columna con ese nombre")
                         .as_materialized_series()
                         .iter()
                         .map(|value| value.to_string())
                         .collect();
+
+                    let (source_table, source_column, target_table, target_column) =
+                        if col1_hash.is_subset(&col2_hash) {
+                            (table1, col1, table2, col2)
+                        } else if col2_hash.is_subset(&col1_hash) {
+                            (table2, col2, table1, col1)
+                        } else {
+                            continue;
+                        };
+
+                    let source_is_unique =
+                        source_column.unique_count == source_table.schema.row_count;
+                    let target_is_unique =
+                        target_column.unique_count == target_table.schema.row_count;
+
+                    let cardinality = match (source_is_unique, target_is_unique) {
+                        (true, true) => "one-to-one",
+                        (false, true) => "many-to-one",
+                        (true, false) => "one-to-many",
+                        (false, false) => "many-to-many",
+                    };
+
+                    let mut confidence: f32 = 0.85;
+
+                    if col1_hash == col2_hash && cardinality == "one-to-one" {
+                        confidence += 0.15;
+                    } else if cardinality == "one-to-one" || cardinality == "many-to-one" {
+                        confidence += 0.10;
+                    }
+
+                    let rel = RelationshipSuggestion {
+                        source_table: source_table.schema.name.clone(),
+                        source_column: source_column.name.clone(),
+                        target_table: target_table.schema.name.clone(),
+                        target_column: target_column.name.clone(),
+                        cardinality: cardinality.to_string(),
+                        confidence,
+                        status: if confidence >= 1.0 {
+                            "accepted".to_string()
+                        } else {
+                            "suggested".to_string()
+                        },
+                    };
+
+                    session.relationships.push(rel);
                 }
             }
         }
     }
-
-    relationships
 }
 
 #[derive(Deserialize)]
