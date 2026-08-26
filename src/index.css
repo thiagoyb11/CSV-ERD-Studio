@@ -6,6 +6,12 @@
   initial-value: #101210;
 }
 
+@property --color-studio-export {
+    syntax: '<color>';
+    inherits: true;
+    initial-value: #3bd61c;
+}
+
 @property --color-studio-panel {
   syntax: '<color>';
   inherits: true;
@@ -62,6 +68,7 @@
 
 :root,
 [data-theme='dark'] {
+  --color-studio-export: #3bd61c;
   --color-studio-shell: #101210;
   --color-studio-panel: #171a17;
   --color-studio-raised: #20241f;
@@ -77,6 +84,7 @@
 }
 
 [data-theme='light'] {
+  --color-studio-export: #3bd61c;
   --color-studio-shell: #f4f6f1;
   --color-studio-panel: #ffffff;
   --color-studio-raised: #e9ede5;
@@ -101,6 +109,7 @@ body,
 html {
   scrollbar-gutter: stable;
   transition:
+    --color-studio-export 1s ease-in-out,
     --color-studio-shell 1s ease-in-out,
     --color-studio-panel 1s ease-in-out,
     --color-studio-raised 1s ease-in-out,
@@ -161,6 +170,7 @@ body {
 }
 
 @theme {
+  --color-studio-export: #3bd61c;
   --color-studio-shell: #101210;
   --color-studio-panel: #171a17;
   --color-studio-raised: #20241f;

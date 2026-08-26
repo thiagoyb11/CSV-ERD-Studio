@@ -1,6 +1,17 @@
-import { useEffect, useId, useRef, useState, type PointerEvent, type WheelEvent } from 'react'
+import {
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type MouseEvent,
+  type PointerEvent,
+  type WheelEvent,
+} from 'react'
 import mermaid from 'mermaid'
 import type { AnalysisResult, RelationshipSuggestion, TableSchema } from '../types/schema'
+import exportIco from '../icons/export.svg'
+import ExportTooltip from './ExportTooltip'
+import { downloadBlob } from '../utils/export'
 
 interface MermaidProps {
   analysis: Pick<AnalysisResult, 'tables' | 'relationships'>
@@ -22,6 +33,8 @@ export function Mermaid({ analysis, darkMode }: MermaidProps) {
   const [error, setError] = useState('')
   const [dragging, setDragging] = useState(false)
   const [view, setView] = useState({ x: 0, y: 0, scale: 1 })
+  const [exportMenu, setExportMenu] = useState({ open: false, x: 0, y: 0 })
+  const chart = buildChart(analysis.tables, analysis.relationships)
 
   const fitDiagram = () => {
     const viewport = viewportRef.current
@@ -57,8 +70,6 @@ export function Mermaid({ analysis, darkMode }: MermaidProps) {
 
   useEffect(() => {
     let isCurrent = true
-    const chart = buildChart(analysis.tables, analysis.relationships)
-
     const renderChart = async () => {
       try {
         mermaid.initialize({
@@ -87,7 +98,7 @@ export function Mermaid({ analysis, darkMode }: MermaidProps) {
     return () => {
       isCurrent = false
     }
-  }, [analysis, darkMode, elementId])
+  }, [analysis, chart, darkMode, elementId])
 
   const startDrag = (event: PointerEvent<HTMLDivElement>) => {
     if (event.button !== 0 || event.target instanceof HTMLButtonElement) return
@@ -143,6 +154,55 @@ export function Mermaid({ analysis, darkMode }: MermaidProps) {
     })
   }
 
+  const openExportMenu = (event: MouseEvent<HTMLButtonElement>) => {
+    const bounds = event.currentTarget.getBoundingClientRect()
+    setExportMenu({
+      open: true,
+      x: bounds.right,
+      y: bounds.top - 8,
+    })
+  }
+
+  const exportPng = async () => {
+    const sourceSvg = diagramRef.current?.querySelector('svg')
+    if (!sourceSvg) throw new Error('The diagram is not ready')
+
+    const viewBox = sourceSvg.viewBox.baseVal
+    const sourceWidth = viewBox.width || sourceSvg.getBoundingClientRect().width
+    const sourceHeight = viewBox.height || sourceSvg.getBoundingClientRect().height
+    if (!sourceWidth || !sourceHeight) throw new Error('The diagram has no dimensions')
+
+    const clonedSvg = sourceSvg.cloneNode(true) as SVGSVGElement
+    clonedSvg.setAttribute('xmlns', 'http://www.w3.org/2000/svg')
+    clonedSvg.setAttribute('width', `${sourceWidth}`)
+    clonedSvg.setAttribute('height', `${sourceHeight}`)
+
+    const svgBlob = new Blob([new XMLSerializer().serializeToString(clonedSvg)], {
+      type: 'image/svg+xml;charset=utf-8',
+    })
+    const svgUrl = URL.createObjectURL(svgBlob)
+
+    try {
+      const image = await loadImage(svgUrl)
+      const exportScale = Math.min(2, 4096 / Math.max(sourceWidth, sourceHeight))
+      const canvas = document.createElement('canvas')
+      canvas.width = Math.max(1, Math.round(sourceWidth * exportScale))
+      canvas.height = Math.max(1, Math.round(sourceHeight * exportScale))
+
+      const context = canvas.getContext('2d')
+      if (!context) throw new Error('Canvas is unavailable')
+
+      context.fillStyle = darkMode ? '#101210' : '#f4f6f1'
+      context.fillRect(0, 0, canvas.width, canvas.height)
+      context.drawImage(image, 0, 0, canvas.width, canvas.height)
+
+      const pngBlob = await canvasToBlob(canvas)
+      downloadBlob(pngBlob, 'csv-erd-diagram.png')
+    } finally {
+      URL.revokeObjectURL(svgUrl)
+    }
+  }
+
   return (
     <div
       ref={viewportRef}
@@ -171,8 +231,49 @@ export function Mermaid({ analysis, darkMode }: MermaidProps) {
         style={{ transform: `translate(${view.x}px, ${view.y}px) scale(${view.scale})`, transformOrigin: '0 0' }}
       />
       {error && <p className="p-6 text-sm text-red-400">{error}</p>}
+      <div
+        className="absolute bottom-3 right-3 z-10 flex overflow-hidden rounded border border-studio-border bg-studio-raised shadow"
+        onPointerDown={(event) => event.stopPropagation()}
+      >
+        <button
+          aria-expanded={exportMenu.open}
+          aria-haspopup="menu"
+          className="flex h-8 w-[108px] flex-row items-center justify-between px-3 py-1 text-xs text-studio-text hover:bg-studio-accent-soft"
+          onClick={openExportMenu}
+          type="button"
+        >
+          <span>Exportar</span>
+          <img alt="" aria-hidden="true" className="h-4 w-4" src={exportIco} />
+        </button>
+      </div>
+      <ExportTooltip
+        mermaidCode={chart}
+        onClose={() => setExportMenu((current) => ({ ...current, open: false }))}
+        onExportPng={exportPng}
+        open={exportMenu.open}
+        x={exportMenu.x}
+        y={exportMenu.y}
+      />
     </div>
   )
+}
+
+function loadImage(source: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const image = new Image()
+    image.onload = () => resolve(image)
+    image.onerror = () => reject(new Error('The SVG could not be loaded'))
+    image.src = source
+  })
+}
+
+function canvasToBlob(canvas: HTMLCanvasElement): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (blob) resolve(blob)
+      else reject(new Error('The PNG could not be generated'))
+    }, 'image/png')
+  })
 }
 
 function clampScale(scale: number): number {

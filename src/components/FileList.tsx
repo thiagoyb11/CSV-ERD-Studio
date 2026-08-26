@@ -77,7 +77,7 @@ export default function FileList({ files, selectedIndex, onSelect }: FileListPro
               Tablas cargadas
             </strong>
           </div>
-          <span className="my-auto justify-end min-w-6 place-items-center rounded-full bg-studio-accent-soft px-2 py-1 text-[10px] font-medium text-studio-accent">
+          <span className="my-auto justify-end min-w-6 place-items-center rounded-full bg-studio-accent-soft px-2 py-1 text-[10px] font-medium text-studio-text">
             {files.length}
           </span>
         </div>
