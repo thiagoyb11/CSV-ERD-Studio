@@ -52,20 +52,20 @@ export default function Button({
       onClick={handleClick}
       className="
         relative
-        border-studio-accent-soft
-        border-1
-        transition-[box-shadow, transform]
-        hover:-translate-y-0.5
-        duration-300 ease-in-out
-        hover:shadow-[0_0_10px_rgba(185,228,109,0.4)]
         isolate
         overflow-hidden
-        rounded-lg bg-studio-accent
+        rounded-lg
+        border border-studio-accent-soft
+        bg-studio-accent
         px-4 py-2
         text-studio-shell
+        transition-[box-shadow,transform]
+        duration-300 ease-in-out
+        hover:-translate-y-0.5
+        hover:shadow-[0_0_10px_rgba(185,228,109,0.4)]
       "
     >
-      <span className="relative z-10">
+      <span className="relative z-10 block whitespace-nowrap">
         {children}
       </span>
 

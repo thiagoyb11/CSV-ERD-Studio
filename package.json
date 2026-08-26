@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "mermaid": "^11.17.0",
+    "motion": "^13.1.1",
     "react": "latest",
     "react-dom": "latest"
   },

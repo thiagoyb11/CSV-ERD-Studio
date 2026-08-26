@@ -1,9 +1,24 @@
+import { useState } from 'react'
 import logo from '../assets/logo.svg'
 import Button from './Button'
+import Modal from './Modal'
 
 export default function Menu({ onNewAnalysis }: { onNewAnalysis: () => void }) {
+  const [modalOpen, setModalOpen] = useState(false)
+
+  const handleConfirm = () => {
+    setModalOpen(false)
+    onNewAnalysis()
+  }
+
   return (
     <header className="flex h-16 w-full items-center justify-between overflow-hidden border-b border-studio-border bg-studio-panel px-5 sm:px-7">
+      <Modal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onConfirm={handleConfirm}
+      />
+
       <div className="flex min-w-0 items-center gap-3">
         <img
           src={logo}
@@ -18,7 +33,7 @@ export default function Menu({ onNewAnalysis }: { onNewAnalysis: () => void }) {
         </span>
       </div>
 
-      <Button onClick={onNewAnalysis}>Nuevo análisis</Button>
+      <Button onClick={() => setModalOpen(true)}>Nuevo análisis</Button>
     </header>
   )
 }

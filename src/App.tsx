@@ -35,13 +35,15 @@ export default function App() {
     >
       <Menu onNewAnalysis={handleNewAnalysis} />
       {page === 'landing' && (
-        <>
+        <section className="page-fade-in flex w-full flex-col items-center gap-5">
           <p className="mt-3 text-zinc-400">Arrastra y suelta archivos CSV aquí para ver el diagrama de relaciones.</p>
           <Landing onFileUpload={handleFileUpload} />
-        </>
+        </section>
       )}
       {page === 'explorer' && (
-        <Explorer files={files} onAnalysisReady={setAnalysisId} />
+        <div className="page-fade-in flex min-h-0 w-full flex-1 overflow-hidden">
+          <Explorer files={files} onAnalysisReady={setAnalysisId} />
+        </div>
       )}
     </main>
   )
