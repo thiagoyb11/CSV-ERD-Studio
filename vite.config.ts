@@ -4,7 +4,7 @@ import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
-  base: './',
+  base: '/CSV-ERD-Studio/',
   server: {
     proxy: {
       '/api': 'http://127.0.0.1:3000',

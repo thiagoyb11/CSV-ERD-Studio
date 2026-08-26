@@ -85,6 +85,7 @@ pub fn router() -> Router {
                 .allow_origin([
                     HeaderValue::from_static("http://localhost:5173"),
                     HeaderValue::from_static("http://127.0.0.1:5173"),
+                    HeaderValue::from_static("https://thiagoyb11.github.io"),
                 ])
                 .allow_methods([Method::GET, Method::POST, Method::DELETE])
                 .allow_headers([CONTENT_TYPE]),

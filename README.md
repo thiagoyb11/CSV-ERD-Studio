@@ -1,20 +1,132 @@
-# CSV-ERD-Studio
-Visualizador de diagramas ER para archivos CSV
+# CSV ERD Studio
 
-## Template inicial
+CSV ERD Studio convierte un conjunto de archivos CSV relacionados en una vista exploratoria: infiere la estructura de cada tabla, propone relaciones entre columnas y genera un diagrama entidad-relación navegable. Además del diagrama, permite inspeccionar las filas de cada archivo sin cargar toda la tabla en el navegador de una sola vez.
 
-Base en React, TypeScript, Vite y Tailwind CSS. Los archivos contienen únicamente la estructura y marcadores `TODO`; todavía no implementan el análisis de CSV.
+## Funcionalidades
 
-El directorio `backend/` contiene el template del servidor Rust con Axum y Polars.
+- Carga múltiple de archivos CSV mediante selector o arrastrar y soltar.
+- Inferencia de nombres, tipos de columnas y candidatos a clave primaria.
+- Detección heurística de relaciones entre tablas y sus cardinalidades.
+- Diagrama ER generado con Mermaid, con zoom, arrastre y restablecimiento de vista.
+- Explorador lateral redimensionable con búsqueda animada por nombre de archivo.
+- Vista tabular con encabezado fijo y paginación incremental al hacer scroll.
+- Temas claro y oscuro, tomando inicialmente la preferencia del dispositivo.
+- Liberación del análisis anterior al iniciar uno nuevo para controlar el uso de memoria.
+
+## Tecnologías
+
+El frontend está construido con React, TypeScript, Vite, Tailwind CSS y Motion. El backend utiliza Rust, Axum y Polars: recibe los CSV, conserva temporalmente el análisis activo en memoria y expone páginas de filas al frontend.
+
+```text
+Navegador (React/Vite)
+        │ HTTP / multipart
+        ▼
+API (Axum)
+        │
+        ├── Polars: lectura e inferencia de CSV
+        ├── Analizador de claves y relaciones
+        └── Sesión temporal del análisis activo
+```
+
+## Requisitos
+
+- Node.js 22 o una versión LTS compatible.
+- npm.
+- Rust estable con Cargo.
+
+## Desarrollo local
+
+Instalá las dependencias del frontend:
 
 ```bash
 npm install
-npm run dev
 ```
 
-Para iniciar el backend:
+Iniciá el backend en una terminal:
 
 ```bash
 cd backend
 cargo run
 ```
+
+La API escucha por defecto en `http://127.0.0.1:3000`. Se puede cambiar el puerto definiendo la variable de entorno `PORT`.
+
+En otra terminal, iniciá Vite:
+
+```bash
+npm run dev
+```
+
+Durante el desarrollo, Vite redirige las solicitudes `/api` hacia el backend local. Si el backend se ejecuta en otro dominio, creá un archivo `.env.local`:
+
+```env
+VITE_API_URL=https://api.example.com
+```
+
+No agregues una barra final a `VITE_API_URL`.
+
+## Endpoints principales
+
+| Método | Ruta | Descripción |
+| --- | --- | --- |
+| `GET` | `/api/health` | Comprueba que la API esté disponible. |
+| `POST` | `/api/analyses` | Recibe uno o más CSV y crea el análisis. |
+| `GET` | `/api/analyses/:id` | Recupera la metadata del análisis activo. |
+| `GET` | `/api/analyses/:id/tables/:tableId/rows` | Obtiene una página de filas. |
+| `DELETE` | `/api/analyses/:id` | Libera los datos retenidos por el análisis. |
+
+## Comandos útiles
+
+```bash
+npm run dev       # servidor de desarrollo
+npm run lint      # análisis estático del frontend
+npm run build     # TypeScript + build de producción
+npm run preview   # previsualización local de dist/
+```
+
+Para verificar el backend:
+
+```bash
+cd backend
+cargo test
+```
+
+## Publicación en GitHub Pages
+
+El repositorio incluye el workflow `.github/workflows/deploy-pages.yml`. Cada push a `main` compila el frontend y publica el contenido de `dist/` en GitHub Pages.
+
+La URL prevista para este repositorio es:
+
+```text
+https://thiagoyb11.github.io/CSV-ERD-Studio/
+```
+
+En GitHub se debe seleccionar **Settings → Pages → Build and deployment → GitHub Actions**. El frontend necesita conocer la URL pública del backend mediante una variable del repositorio:
+
+1. Abrí **Settings → Secrets and variables → Actions → Variables**.
+2. Creá `VITE_API_URL` con un valor como `https://csv-erd-api.example.com`.
+3. Ejecutá nuevamente el workflow o hacé un nuevo push a `main`.
+
+GitHub Pages aloja únicamente el frontend estático; no puede ejecutar el servidor Rust. Si `VITE_API_URL` no está configurada, la interfaz se publicará, pero la carga y el análisis de CSV no funcionarán en producción. El backend ya admite el origen `https://thiagoyb11.github.io` mediante CORS.
+
+## Estructura del proyecto
+
+```text
+src/
+  components/    Componentes de interfaz, tabla, archivos y Mermaid
+  pages/         Landing y explorador del análisis
+  types/         Contratos TypeScript de la API
+backend/
+  src/api.rs     Rutas HTTP, sesiones y paginación
+  src/analyzer.rs Inferencia de tablas y relaciones
+  src/schema.rs  Tipos serializables compartidos por la API
+.github/
+  workflows/     Build y despliegue automático de GitHub Pages
+```
+
+## Consideraciones actuales
+
+- Los archivos se envían al backend para ser procesados; no deben subirse datos sensibles a una instancia que no controles.
+- El servidor conserva un único análisis activo en memoria y libera el anterior al crear uno nuevo.
+- El límite total del multipart es de 300 MB y cada CSV individual puede ocupar hasta 100 MB.
+- La detección de relaciones es heurística: el resultado es una sugerencia visual y puede requerir validación manual.
