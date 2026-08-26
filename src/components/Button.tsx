@@ -58,7 +58,7 @@ export default function Button({
         border border-studio-accent-soft
         bg-studio-accent
         px-4 py-2
-        text-studio-shell
+        text-studio-on-accent
         transition-[box-shadow,transform]
         duration-300 ease-in-out
         hover:-translate-y-0.5
@@ -76,7 +76,7 @@ export default function Button({
           className="
             pointer-events-none absolute z-0 block origin-center
             animate-ripple rounded-full
-            bg-studio-shell/35
+            bg-studio-on-accent/25
             motion-reduce:hidden
           "
           style={{

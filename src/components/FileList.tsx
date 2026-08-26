@@ -1,4 +1,5 @@
 import { useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent } from 'react'
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import FileCard from './FileCard'
 
 const DEFAULT_WIDTH = 288
@@ -15,8 +16,13 @@ export default function FileList({ files, selectedIndex, onSelect }: FileListPro
   const [width, setWidth] = useState(DEFAULT_WIDTH)
   const [search, setSearch] = useState<string>("")
   const [resizing, setResizing] = useState(false)
+  const reduceMotion = useReducedMotion()
   const drag = useRef<{ pointerId: number; startX: number; startWidth: number } | null>(null)
   const totalSize = files.reduce((total, file) => total + file.size, 0)
+  const normalizedSearch = search.trim().toLocaleLowerCase()
+  const visibleFiles = files
+    .map((file, index) => ({ file, index }))
+    .filter(({ file }) => file.name.toLocaleLowerCase().includes(normalizedSearch))
 
   const clampWidth = (nextWidth: number) => Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, nextWidth))
 
@@ -75,21 +81,30 @@ export default function FileList({ files, selectedIndex, onSelect }: FileListPro
             {files.length}
           </span>
         </div>
-        <input onChange={(e) => {setSearch(e.target.value)}} type="search" className="w-full focus:outline-none focus:border-studio-accent transition-all duration-300 mx-1 bg-studio-raised rounded-lg py-1 px-4 mt-2 text-white" placeholder="Buscar tablas: ">
+        <input onChange={(e) => {setSearch(e.target.value)}} type="search" className="w-full focus:outline-none focus:border-studio-accent transition-all duration-300 mx-1 bg-studio-raised rounded-lg py-1 px-4 mt-2 text-studio-text placeholder:text-studio-muted" placeholder="Buscar tablas: ">
 
         </input>
       </header>
 
       <div className="grid max-h-72 gap-1.5 overflow-y-auto p-2 sm:max-h-[calc(100vh-200px)]">
-        {files.map((file, index) => (
-          <FileCard
-            searchState={search}
-            key={`${file.name}-${file.lastModified}-${index}`}
-            file={file}
-            selected={selectedIndex === index}
-            onClick={() => onSelect(index)}
-          />
-        ))}
+        <AnimatePresence initial={false} mode="popLayout">
+          {visibleFiles.map(({ file, index }) => (
+            <motion.div
+              layout="position"
+              key={`${file.name}-${file.lastModified}-${index}`}
+              initial={reduceMotion ? false : { opacity: 0, x: -14 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={reduceMotion ? { opacity: 0 } : { opacity: 0, x: -14 }}
+              transition={{ duration: reduceMotion ? 0 : 0.22, ease: [0.22, 1, 0.36, 1] }}
+            >
+              <FileCard
+                file={file}
+                selected={selectedIndex === index}
+                onClick={() => onSelect(index)}
+              />
+            </motion.div>
+          ))}
+        </AnimatePresence>
       </div>
 
       <footer className="mt-auto border-t border-studio-border px-4 py-3 text-[10px] text-studio-muted">

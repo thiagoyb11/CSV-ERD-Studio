@@ -2,8 +2,9 @@ import { useState } from 'react'
 import logo from '../assets/logo.svg'
 import Button from './Button'
 import Modal from './Modal'
+import ThemeToggle from './ThemeToggle'
 
-export default function Menu({ onNewAnalysis }: { onNewAnalysis: () => void }) {
+export default function Menu({ onNewAnalysis, darkModeHandler, darkModeState }: { onNewAnalysis: () => void, darkModeHandler: () => void, darkModeState: boolean }) {
   const [modalOpen, setModalOpen] = useState(false)
 
   const handleConfirm = () => {
@@ -32,8 +33,10 @@ export default function Menu({ onNewAnalysis }: { onNewAnalysis: () => void }) {
           CSV ERD Studio
         </span>
       </div>
-
-      <Button onClick={() => setModalOpen(true)}>Nuevo análisis</Button>
+      <div className="flex flex-row gap-10 justify-between">
+        <ThemeToggle darkModeHandler={darkModeHandler} darkModeState={darkModeState}></ThemeToggle>
+        <Button onClick={() => setModalOpen(true)}>Nuevo análisis</Button>
+      </div>
     </header>
   )
 }

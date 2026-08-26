@@ -1,5 +1,127 @@
 @import "tailwindcss";
 
+@property --color-studio-shell {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #101210;
+}
+
+@property --color-studio-panel {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #171a17;
+}
+
+@property --color-studio-raised {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #20241f;
+}
+
+@property --color-studio-text {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #f0f2eb;
+}
+
+@property --color-studio-muted {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #9ca398;
+}
+
+@property --color-studio-border {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #30352e;
+}
+
+@property --color-studio-accent-soft {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #27351f;
+}
+
+@property --color-studio-file-icon {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #20241f;
+}
+
+@property --color-studio-file-icon-selected {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: rgb(185 228 109 / 15%);
+}
+
+@property --color-studio-warning {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #f1bf64;
+}
+
+:root,
+[data-theme='dark'] {
+  --color-studio-shell: #101210;
+  --color-studio-panel: #171a17;
+  --color-studio-raised: #20241f;
+  --color-studio-text: #f0f2eb;
+  --color-studio-muted: #9ca398;
+  --color-studio-border: #30352e;
+  --color-studio-accent: #b9e46d;
+  --color-studio-accent-soft: #27351f;
+  --color-studio-on-accent: #18200f;
+  --color-studio-file-icon: #20241f;
+  --color-studio-file-icon-selected: color-mix(in srgb, #b9e46d 15%, transparent);
+  --color-studio-warning: #f1bf64;
+}
+
+[data-theme='light'] {
+  --color-studio-shell: #f4f6f1;
+  --color-studio-panel: #ffffff;
+  --color-studio-raised: #e9ede5;
+  --color-studio-text: #20251e;
+  --color-studio-muted: #667061;
+  --color-studio-border: #cfd6ca;
+  --color-studio-accent: #b9e46d;
+  --color-studio-accent-soft: #e3efcf;
+  --color-studio-on-accent: #18200f;
+  --color-studio-file-icon: #35442d;
+  --color-studio-file-icon-selected: #35442d;
+  --color-studio-warning: #9a6511;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+  background-color: var(--color-studio-shell);
+}
+
+html {
+  scrollbar-gutter: stable;
+  transition:
+    --color-studio-shell 1s ease-in-out,
+    --color-studio-panel 1s ease-in-out,
+    --color-studio-raised 1s ease-in-out,
+    --color-studio-text 1s ease-in-out,
+    --color-studio-muted 1s ease-in-out,
+    --color-studio-border 1s ease-in-out,
+    --color-studio-accent-soft 1s ease-in-out,
+    --color-studio-file-icon 1s ease-in-out,
+    --color-studio-file-icon-selected 1s ease-in-out,
+    --color-studio-warning 1s ease-in-out;
+}
+
+[data-theme-transitioning] body * {
+  transition-duration: 0s !important;
+}
+
+body {
+  margin: 0;
+  color: var(--color-studio-text);
+}
+
 @keyframes page-fade-in {
   from {
     opacity: 0;
@@ -29,6 +151,13 @@
   .page-fade-in > * {
     animation: none;
   }
+
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 @theme {
@@ -42,6 +171,9 @@
 
   --color-studio-accent: #b9e46d;
   --color-studio-accent-soft: #27351f;
+  --color-studio-on-accent: #18200f;
+  --color-studio-file-icon: #20241f;
+  --color-studio-file-icon-selected: color-mix(in srgb, #b9e46d 15%, transparent);
 
   --color-studio-warning: #f1bf64;
 

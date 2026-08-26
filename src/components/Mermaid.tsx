@@ -2,20 +2,13 @@ import { useEffect, useId, useRef, useState, type PointerEvent, type WheelEvent 
 import mermaid from 'mermaid'
 import type { AnalysisResult, RelationshipSuggestion, TableSchema } from '../types/schema'
 
-mermaid.initialize({
-  startOnLoad: false,
-  theme: 'dark',
-  securityLevel: 'strict',
-  // El visor controla el tamaño; Mermaid no debe reducir el SVG automáticamente.
-  er: { useMaxWidth: false },
-})
-
 interface MermaidProps {
   analysis: Pick<AnalysisResult, 'tables' | 'relationships'>
+  darkMode: boolean
 }
 
 // El diagrama es una vista derivada de la metadata; nunca recibe los DataFrames.
-export function Mermaid({ analysis }: MermaidProps) {
+export function Mermaid({ analysis, darkMode }: MermaidProps) {
   const viewportRef = useRef<HTMLDivElement>(null)
   const diagramRef = useRef<HTMLDivElement>(null)
   const dragRef = useRef<{
@@ -68,6 +61,13 @@ export function Mermaid({ analysis }: MermaidProps) {
 
     const renderChart = async () => {
       try {
+        mermaid.initialize({
+          startOnLoad: false,
+          theme: darkMode ? 'dark' : 'default',
+          securityLevel: 'strict',
+          // El visor controla el tamaño; Mermaid no debe reducir el SVG automáticamente.
+          er: { useMaxWidth: false },
+        })
         const { svg, bindFunctions } = await mermaid.render(`erd-${elementId}`, chart)
         if (!isCurrent || !diagramRef.current) return
 
@@ -87,7 +87,7 @@ export function Mermaid({ analysis }: MermaidProps) {
     return () => {
       isCurrent = false
     }
-  }, [analysis, elementId])
+  }, [analysis, darkMode, elementId])
 
   const startDrag = (event: PointerEvent<HTMLDivElement>) => {
     if (event.button !== 0 || event.target instanceof HTMLButtonElement) return

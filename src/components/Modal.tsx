@@ -81,7 +81,7 @@ export default function Modal({ open, onClose, onConfirm }: ModalProps) {
                   <button
                     type="button"
                     onClick={onConfirm}
-                    className="rounded-lg border border-studio-accent-soft bg-studio-accent px-4 py-2 text-sm font-semibold text-studio-shell transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_0_12px_rgba(185,228,109,0.35)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-studio-accent"
+                    className="rounded-lg border border-studio-accent-soft bg-studio-accent px-4 py-2 text-sm font-semibold text-studio-on-accent transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_0_12px_rgba(185,228,109,0.35)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-studio-accent"
                   >
                     Sí, iniciar de nuevo
                   </button>

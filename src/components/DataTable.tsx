@@ -88,17 +88,20 @@ export default function DataTable({ analysisId, table }: DataTableProps) {
 
   return (
     <div className="flex h-full min-h-0 w-full flex-col">
-      <h1 className="mx-auto font-mono text-gray-300">{table.name}.csv</h1>
+      <h1 className="mx-auto font-mono text-studio-text">{table.name}.csv</h1>
       <p className="mb-3 text-left text-sm text-studio-muted">
         {table.rowCount} filas · {table.columns.length} columnas
       </p>
 
       <div className="min-h-0 flex-1 overflow-auto" onScroll={handleScroll}>
         <table className="w-full text-left text-sm">
-          <thead className="sticky top-0 z-10 bg-studio-panel">
+          <thead>
             <tr>
               {table.columns.map((column) => (
-                <th className="border-b border-studio-border p-2" key={column.id}>
+                <th
+                  className="sticky top-0 z-10 border-b border-studio-border bg-studio-panel p-2 text-studio-text [backface-visibility:hidden]"
+                  key={column.id}
+                >
                   {column.name}
                 </th>
               ))}

@@ -4,22 +4,21 @@ interface FileCardProps {
   file: File
   selected?: boolean
   onClick?: () => void
-  searchState?: string
 }
 
-export default function FileCard({ file, selected = false, onClick, searchState = ""}: FileCardProps) {
+export default function FileCard({ file, selected = false, onClick }: FileCardProps) {
   return (
     <button
       type="button"
       onClick={onClick}
       aria-pressed={selected}
-      className={`${file.name.toLowerCase().includes(searchState.toLowerCase()) ? "" : "hidden" } group relative flex w-full items-center gap-3 rounded-xl border p-3 text-left transition duration-200 ease-out ${
+      className={`group relative flex w-full items-center gap-3 rounded-xl border p-3 text-left transition duration-200 ease-out ${
         selected
           ? 'border-studio-accent/50 bg-studio-accent-soft'
           : 'border-transparent bg-studio-panel hover:border-studio-border hover:bg-studio-raised'
       }`}
     >
-      <span className={`grid size-10 shrink-0 place-items-center rounded-lg ${selected ? 'bg-studio-accent/15' : 'bg-studio-raised'}`}>
+      <span className={`grid size-10 shrink-0 place-items-center rounded-lg ${selected ? 'bg-studio-file-icon-selected' : 'bg-studio-file-icon'}`}>
         <img className="size-6" src={fileIcon} alt="" />
       </span>
 

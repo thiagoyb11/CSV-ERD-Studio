@@ -9,6 +9,7 @@ const API_URL = import.meta.env.VITE_API_URL ?? ''
 interface ExplorerProps {
   files: File[]
   onAnalysisReady: (analysisId: number) => void
+  darkMode: boolean
 }
 
 async function readJson<T>(response: Response): Promise<T> {
@@ -19,7 +20,7 @@ async function readJson<T>(response: Response): Promise<T> {
   return response.json() as Promise<T>
 }
 
-export default function Explorer({ files, onAnalysisReady }: ExplorerProps) {
+export default function Explorer({ files, onAnalysisReady, darkMode }: ExplorerProps) {
   const [analysis, setAnalysis] = useState<AnalysisResult>()
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [error, setError] = useState('')
@@ -69,10 +70,10 @@ export default function Explorer({ files, onAnalysisReady }: ExplorerProps) {
             <p className="p-6 text-sm text-studio-muted">Analizando {files.length} archivos…</p>
           )}
           {error && <p className="p-6 text-sm text-red-400">{error}</p>}
-          {analysis && <Mermaid analysis={analysis} />}
+          {analysis && <Mermaid analysis={analysis} darkMode={darkMode} />}
         </div>
 
-        <div className="mx-auto border-studio-border border flex min-h-0 w-full flex-1 flex-col overflow-hidden bg-studio-panel p-4 text-white">
+        <div className="mx-auto border-studio-border border flex min-h-0 w-full flex-1 flex-col overflow-hidden bg-studio-panel p-4 text-studio-text">
           {!analysis && !error && (
             <p className="text-sm text-studio-muted">Analizando {files.length} archivos…</p>
           )}

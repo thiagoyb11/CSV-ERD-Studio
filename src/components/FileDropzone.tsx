@@ -27,7 +27,7 @@ export default function FileDropzone({ onFileUpload }: { onFileUpload: (files: F
     <div onDragOver={(event) => {
       event.preventDefault()
       setDragging(true)
-    }} onDragLeave={() => setDragging(false)} onDrop={handleDrop} className={`${dragging ? 'border-studio-accent bg-studio-accent-soft' : 'border-studio-border bg-studio-raised'} mx-20 flex h-[400px] outline-dotted outline-2 w-full max-w-[800px] flex-col items-center gap-2.5 rounded-2xl bg-studio-raised pt-12 text-center text-white`}>
+    }} onDragLeave={() => setDragging(false)} onDrop={handleDrop} className={`${dragging ? 'border-studio-accent bg-studio-accent-soft' : 'border-studio-border bg-studio-raised'} mx-20 flex h-[400px] outline-dotted outline-2 w-full max-w-[800px] flex-col items-center gap-2.5 rounded-2xl bg-studio-raised pt-12 text-center text-studio-text`}>
       <div className="text-studio-accent w-20 h-20 rounded-full align-center text-center bg-studio-accent-soft py-5 px-5">
         <svg
           className="mx-auto"
@@ -56,7 +56,7 @@ export default function FileDropzone({ onFileUpload }: { onFileUpload: (files: F
         multiple
         className="sr-only"
       />
-      <p className="px-20 text-gray-400">Arrastrá una carpeta o seleccioná varios archivos. Se validan primero y después aparece el diagrama.</p>
+      <p className="px-20 text-studio-muted">Arrastrá una carpeta o seleccioná varios archivos. Se validan primero y después aparece el diagrama.</p>
       <Button onClick={() => fileInputRef.current?.click()}>Seleccionar archivos CSV</Button>
     </div>
   )
