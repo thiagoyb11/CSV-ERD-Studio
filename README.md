@@ -91,24 +91,6 @@ cd backend
 cargo test
 ```
 
-## Publicación en GitHub Pages
-
-El repositorio incluye el workflow `.github/workflows/deploy-pages.yml`. Cada push a `main` compila el frontend y publica el contenido de `dist/` en GitHub Pages.
-
-La URL prevista para este repositorio es:
-
-```text
-https://thiagoyb11.github.io/CSV-ERD-Studio/
-```
-
-En GitHub se debe seleccionar **Settings → Pages → Build and deployment → GitHub Actions**. El frontend necesita conocer la URL pública del backend mediante una variable del repositorio:
-
-1. Abrí **Settings → Secrets and variables → Actions → Variables**.
-2. Creá `VITE_API_URL` con un valor como `https://csv-erd-api.example.com`.
-3. Ejecutá nuevamente el workflow o hacé un nuevo push a `main`.
-
-GitHub Pages aloja únicamente el frontend estático; no puede ejecutar el servidor Rust. Si `VITE_API_URL` no está configurada, la interfaz se publicará, pero la carga y el análisis de CSV no funcionarán en producción. El backend ya admite el origen `https://thiagoyb11.github.io` mediante CORS.
-
 ## Estructura del proyecto
 
 ```text
