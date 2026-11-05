@@ -63,7 +63,7 @@ export default function ThemeToggle({ darkModeState, darkModeHandler }: { darkMo
         whileHover={reduceMotion ? undefined : { scale: 1.08 }}
         whileTap={{ scale: 0.92 }}
         transition={{ scale: { duration: 0.16 } }}
-        className="relative grid size-10 place-items-center overflow-hidden rounded-full border border-studio-accent-soft bg-studio-accent shadow-sm [transform-style:preserve-3d] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-studio-accent disabled:cursor-default"
+        className="relative grid size-10 place-items-center overflow-hidden rounded-full border border-studio-accent-soft bg-studio-accent shadow-sm [transform-style:preserve-3d] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-studio-accent-strong disabled:cursor-default"
       >
         <img
           className="size-6 pointer-events-none"

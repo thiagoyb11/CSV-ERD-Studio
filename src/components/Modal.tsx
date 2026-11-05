@@ -74,14 +74,14 @@ export default function Modal({ open, onClose, onConfirm }: ModalProps) {
                     ref={cancelButtonRef}
                     type="button"
                     onClick={onClose}
-                    className="rounded-lg border border-studio-border bg-studio-raised px-4 py-2 text-sm font-medium text-studio-text transition-colors hover:border-studio-muted hover:bg-studio-border focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-studio-accent"
+                    className="rounded-lg border border-studio-border bg-studio-raised px-4 py-2 text-sm font-medium text-studio-text transition-colors hover:border-studio-muted hover:bg-studio-border focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-studio-accent-strong"
                   >
                     Cancelar
                   </button>
                   <button
                     type="button"
                     onClick={onConfirm}
-                    className="rounded-lg border border-studio-accent-soft bg-studio-accent px-4 py-2 text-sm font-semibold text-studio-on-accent transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_0_12px_rgba(185,228,109,0.35)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-studio-accent"
+                    className="rounded-lg border border-studio-accent-soft bg-studio-accent px-4 py-2 text-sm font-semibold text-studio-on-accent transition duration-200 hover:-translate-y-0.5 hover:shadow-studio-glow focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-studio-accent-strong"
                   >
                     Sí, iniciar de nuevo
                   </button>

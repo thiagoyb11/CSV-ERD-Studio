@@ -84,7 +84,7 @@ export default function DataTable({ analysisId, table }: DataTableProps) {
   }
 
   if (loading) return <p className="text-sm text-studio-muted">Cargando {table.fileName}…</p>
-  if (error) return <p className="text-sm text-red-400">{error}</p>
+  if (error) return <p className="text-sm text-studio-danger">{error}</p>
 
   return (
     <div className="flex h-full min-h-0 w-full flex-col">

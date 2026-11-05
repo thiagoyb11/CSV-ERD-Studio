@@ -14,12 +14,16 @@ export default function FileCard({ file, selected = false, onClick }: FileCardPr
       aria-pressed={selected}
       className={`group relative flex w-full items-center gap-3 rounded-xl border p-3 text-left transition duration-200 ease-out ${
         selected
-          ? 'border-studio-accent/50 bg-studio-accent-soft'
+          ? 'border-studio-accent-strong/50 bg-studio-accent-soft'
           : 'border-transparent bg-studio-panel hover:border-studio-border hover:bg-studio-raised'
       }`}
     >
       <span className={`grid size-10 shrink-0 place-items-center rounded-lg ${selected ? 'bg-studio-file-icon-selected' : 'bg-studio-file-icon'}`}>
-        <img className="size-6" src={fileIcon} alt="" />
+        <span
+          aria-hidden="true"
+          className="size-6 bg-studio-accent-strong mask-contain mask-center mask-no-repeat"
+          style={{ maskImage: `url("${fileIcon}")` }}
+        />
       </span>
 
       <span className="min-w-0 flex-1">
@@ -31,7 +35,7 @@ export default function FileCard({ file, selected = false, onClick }: FileCardPr
         </span>
       </span>
 
-      <span className={`size-1.5 shrink-0 rounded-full ${selected ? 'bg-studio-accent' : 'bg-studio-border group-hover:bg-studio-muted'}`} />
+      <span className={`size-1.5 shrink-0 rounded-full ${selected ? 'bg-studio-accent-strong' : 'bg-studio-border group-hover:bg-studio-muted'}`} />
     </button>
   )
 }

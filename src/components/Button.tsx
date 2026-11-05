@@ -62,7 +62,7 @@ export default function Button({
         transition-[box-shadow,transform]
         duration-300 ease-in-out
         hover:-translate-y-0.5
-        hover:shadow-[0_0_10px_rgba(185,228,109,0.4)]
+        hover:shadow-studio-glow
       "
     >
       <span className="relative z-10 block whitespace-nowrap">

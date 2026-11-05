@@ -13,6 +13,39 @@ import exportIco from '../icons/export.svg'
 import ExportTooltip from './ExportTooltip'
 import { downloadBlob } from '../utils/export'
 
+// Mermaid y la exportación a PNG necesitan colores literales: el SVG serializado
+// no resuelve var(). Estos valores reflejan los tokens studio de index.css.
+const DIAGRAM_COLORS = {
+  dark: {
+    background: '#171a17',
+    primaryColor: '#27351f',
+    primaryTextColor: '#f0f2eb',
+    primaryBorderColor: '#4f6636',
+    secondaryColor: '#20241f',
+    tertiaryColor: '#20241f',
+    lineColor: '#9ca398',
+    textColor: '#f0f2eb',
+    nodeTextColor: '#f0f2eb',
+    edgeLabelBackground: '#171a17',
+    rowOdd: '#20241f',
+    rowEven: '#171a17',
+  },
+  light: {
+    background: '#ffffff',
+    primaryColor: '#e3efcf',
+    primaryTextColor: '#20251e',
+    primaryBorderColor: '#9db585',
+    secondaryColor: '#e9ede5',
+    tertiaryColor: '#e9ede5',
+    lineColor: '#596354',
+    textColor: '#20251e',
+    nodeTextColor: '#20251e',
+    edgeLabelBackground: '#ffffff',
+    rowOdd: '#ffffff',
+    rowEven: '#f4f6f1',
+  },
+}
+
 interface MermaidProps {
   analysis: Pick<AnalysisResult, 'tables' | 'relationships'>
   darkMode: boolean
@@ -74,7 +107,8 @@ export function Mermaid({ analysis, darkMode }: MermaidProps) {
       try {
         mermaid.initialize({
           startOnLoad: false,
-          theme: darkMode ? 'dark' : 'default',
+          theme: 'base',
+          themeVariables: { ...DIAGRAM_COLORS[darkMode ? 'dark' : 'light'], darkMode },
           securityLevel: 'strict',
           // El visor controla el tamaño; Mermaid no debe reducir el SVG automáticamente.
           er: { useMaxWidth: false },
@@ -192,7 +226,7 @@ export function Mermaid({ analysis, darkMode }: MermaidProps) {
       const context = canvas.getContext('2d')
       if (!context) throw new Error('Canvas is unavailable')
 
-      context.fillStyle = darkMode ? '#101210' : '#f4f6f1'
+      context.fillStyle = DIAGRAM_COLORS[darkMode ? 'dark' : 'light'].background
       context.fillRect(0, 0, canvas.width, canvas.height)
       context.drawImage(image, 0, 0, canvas.width, canvas.height)
 
@@ -230,7 +264,7 @@ export function Mermaid({ analysis, darkMode }: MermaidProps) {
         className="absolute left-0 top-0 min-w-max p-6 [&_svg]:max-w-none"
         style={{ transform: `translate(${view.x}px, ${view.y}px) scale(${view.scale})`, transformOrigin: '0 0' }}
       />
-      {error && <p className="p-6 text-sm text-red-400">{error}</p>}
+      {error && <p className="p-6 text-sm text-studio-danger">{error}</p>}
       <div
         className="absolute bottom-3 right-3 z-10 flex overflow-hidden rounded border border-studio-border bg-studio-raised shadow"
         onPointerDown={(event) => event.stopPropagation()}
@@ -243,7 +277,11 @@ export function Mermaid({ analysis, darkMode }: MermaidProps) {
           type="button"
         >
           <span>Exportar</span>
-          <img alt="" aria-hidden="true" className="h-4 w-4" src={exportIco} />
+          <span
+            aria-hidden="true"
+            className="h-4 w-4 bg-studio-accent-strong mask-contain mask-center mask-no-repeat"
+            style={{ maskImage: `url("${exportIco}")` }}
+          />
         </button>
       </div>
       <ExportTooltip

@@ -27,8 +27,8 @@ export default function FileDropzone({ onFileUpload }: { onFileUpload: (files: F
     <div onDragOver={(event) => {
       event.preventDefault()
       setDragging(true)
-    }} onDragLeave={() => setDragging(false)} onDrop={handleDrop} className={`${dragging ? 'border-studio-accent bg-studio-accent-soft' : 'border-studio-border bg-studio-raised'} mx-20 flex h-[400px] outline-dotted outline-2 w-full max-w-[800px] flex-col items-center gap-2.5 rounded-2xl bg-studio-raised pt-12 text-center text-studio-text`}>
-      <div className="text-studio-accent w-20 h-20 rounded-full align-center text-center bg-studio-accent-soft py-5 px-5">
+    }} onDragLeave={() => setDragging(false)} onDrop={handleDrop} className={`${dragging ? 'border-studio-accent-strong bg-studio-accent-soft' : 'border-studio-muted/50 bg-studio-panel'} mx-20 flex h-[400px] border-2 border-dashed transition-colors w-full max-w-[800px] flex-col items-center gap-2.5 rounded-2xl pt-12 text-center text-studio-text`}>
+      <div className="text-studio-accent-strong w-20 h-20 rounded-full align-center text-center bg-studio-accent-soft py-5 px-5">
         <svg
           className="mx-auto"
           viewBox="0 0 24 24"

@@ -81,7 +81,7 @@ export default function FileList({ files, selectedIndex, onSelect }: FileListPro
             {files.length}
           </span>
         </div>
-        <input onChange={(e) => {setSearch(e.target.value)}} type="search" className="w-full focus:outline-none focus:border-studio-accent transition-all duration-300 mx-1 bg-studio-raised rounded-lg py-1 px-4 mt-2 text-studio-text placeholder:text-studio-muted" placeholder="Buscar tablas: ">
+        <input onChange={(e) => {setSearch(e.target.value)}} type="search" className="w-full border border-studio-border focus:outline-none focus:border-studio-accent-strong transition-all duration-300 mx-1 bg-studio-raised rounded-lg py-1 px-4 mt-2 text-studio-text placeholder:text-studio-muted" placeholder="Buscar tablas: ">
 
         </input>
       </header>
@@ -126,7 +126,7 @@ export default function FileList({ files, selectedIndex, onSelect }: FileListPro
         onPointerUp={stopResize}
         onPointerCancel={stopResize}
         className={`absolute inset-y-0 -right-1 z-20 hidden w-2 cursor-col-resize touch-none after:absolute after:inset-y-0 after:left-1/2 after:w-px after:-translate-x-1/2 after:content-[''] hover:after:bg-studio-accent focus:outline-none focus:after:bg-studio-accent sm:block ${
-          resizing ? 'after:bg-studio-accent' : 'after:bg-transparent'
+          resizing ? 'after:bg-studio-accent-strong' : 'after:bg-transparent'
         }`}
       />
     </aside>

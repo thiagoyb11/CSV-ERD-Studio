@@ -6,12 +6,6 @@
   initial-value: #101210;
 }
 
-@property --color-studio-export {
-    syntax: '<color>';
-    inherits: true;
-    initial-value: #3bd61c;
-}
-
 @property --color-studio-panel {
   syntax: '<color>';
   inherits: true;
@@ -42,6 +36,12 @@
   initial-value: #30352e;
 }
 
+@property --color-studio-accent-strong {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #b9e46d;
+}
+
 @property --color-studio-accent-soft {
   syntax: '<color>';
   inherits: true;
@@ -66,9 +66,14 @@
   initial-value: #f1bf64;
 }
 
+@property --color-studio-danger {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #f87171;
+}
+
 :root,
 [data-theme='dark'] {
-  --color-studio-export: #3bd61c;
   --color-studio-shell: #101210;
   --color-studio-panel: #171a17;
   --color-studio-raised: #20241f;
@@ -76,27 +81,30 @@
   --color-studio-muted: #9ca398;
   --color-studio-border: #30352e;
   --color-studio-accent: #b9e46d;
+  --color-studio-accent-strong: #b9e46d;
   --color-studio-accent-soft: #27351f;
   --color-studio-on-accent: #18200f;
   --color-studio-file-icon: #20241f;
   --color-studio-file-icon-selected: color-mix(in srgb, #b9e46d 15%, transparent);
   --color-studio-warning: #f1bf64;
+  --color-studio-danger: #f87171;
 }
 
 [data-theme='light'] {
-  --color-studio-export: #3bd61c;
   --color-studio-shell: #f4f6f1;
   --color-studio-panel: #ffffff;
   --color-studio-raised: #e9ede5;
   --color-studio-text: #20251e;
-  --color-studio-muted: #667061;
+  --color-studio-muted: #596354;
   --color-studio-border: #cfd6ca;
   --color-studio-accent: #b9e46d;
+  --color-studio-accent-strong: #4a7312;
   --color-studio-accent-soft: #e3efcf;
   --color-studio-on-accent: #18200f;
-  --color-studio-file-icon: #35442d;
-  --color-studio-file-icon-selected: #35442d;
+  --color-studio-file-icon: #e9ede5;
+  --color-studio-file-icon-selected: color-mix(in srgb, #4a7312 15%, transparent);
   --color-studio-warning: #9a6511;
+  --color-studio-danger: #b42318;
 }
 
 html,
@@ -109,17 +117,18 @@ body,
 html {
   scrollbar-gutter: stable;
   transition:
-    --color-studio-export 1s ease-in-out,
     --color-studio-shell 1s ease-in-out,
     --color-studio-panel 1s ease-in-out,
     --color-studio-raised 1s ease-in-out,
     --color-studio-text 1s ease-in-out,
     --color-studio-muted 1s ease-in-out,
     --color-studio-border 1s ease-in-out,
+    --color-studio-accent-strong 1s ease-in-out,
     --color-studio-accent-soft 1s ease-in-out,
     --color-studio-file-icon 1s ease-in-out,
     --color-studio-file-icon-selected 1s ease-in-out,
-    --color-studio-warning 1s ease-in-out;
+    --color-studio-warning 1s ease-in-out,
+    --color-studio-danger 1s ease-in-out;
 }
 
 [data-theme-transitioning] body * {
@@ -170,7 +179,6 @@ body {
 }
 
 @theme {
-  --color-studio-export: #3bd61c;
   --color-studio-shell: #101210;
   --color-studio-panel: #171a17;
   --color-studio-raised: #20241f;
@@ -179,13 +187,19 @@ body {
   --color-studio-muted: #9ca398;
   --color-studio-border: #30352e;
 
+  /* accent es el lima de marca para rellenos; accent-strong es la variante
+     legible como texto, ícono o foco sobre las superficies de cada tema. */
   --color-studio-accent: #b9e46d;
+  --color-studio-accent-strong: #b9e46d;
   --color-studio-accent-soft: #27351f;
   --color-studio-on-accent: #18200f;
   --color-studio-file-icon: #20241f;
   --color-studio-file-icon-selected: color-mix(in srgb, #b9e46d 15%, transparent);
 
   --color-studio-warning: #f1bf64;
+  --color-studio-danger: #f87171;
+
+  --shadow-studio-glow: 0 0 12px color-mix(in srgb, var(--color-studio-accent) 40%, transparent);
 
   --animate-ripple: ripple 600ms ease-out forwards;
 

@@ -130,7 +130,7 @@ export default function Explorer({ files, onAnalysisReady, darkMode }: ExplorerP
           {!analysis && !error && (
             <p className="p-6 text-sm text-studio-muted">Analizando {files.length} archivos…</p>
           )}
-          {error && <p className="p-6 text-sm text-red-400">{error}</p>}
+          {error && <p className="p-6 text-sm text-studio-danger">{error}</p>}
           {analysis && <Mermaid analysis={analysis} darkMode={darkMode} />}
         </div>
 
@@ -149,14 +149,14 @@ export default function Explorer({ files, onAnalysisReady, darkMode }: ExplorerP
           role="separator"
           tabIndex={0}
         >
-          <span className="h-1 w-14 rounded-full bg-studio-border transition-colors group-hover:bg-studio-accent group-focus-visible:bg-studio-accent" />
+          <span className="h-1 w-14 rounded-full bg-studio-border transition-colors group-hover:bg-studio-accent-strong group-focus-visible:bg-studio-accent-strong" />
         </div>
 
         <div className="mx-auto flex min-h-0 w-full flex-col overflow-hidden border border-studio-border bg-studio-panel p-4 text-studio-text">
           {!analysis && !error && (
             <p className="text-sm text-studio-muted">Analizando {files.length} archivos…</p>
           )}
-          {error && <p className="text-sm text-red-400">{error}</p>}
+          {error && <p className="text-sm text-studio-danger">{error}</p>}
           {analysis && selectedTable && (
             <DataTable
               key={`${analysis.analysisId}-${selectedTable.id}`}
