@@ -110,6 +110,8 @@ export function Mermaid({ analysis, darkMode }: MermaidProps) {
           theme: 'base',
           themeVariables: { ...DIAGRAM_COLORS[darkMode ? 'dark' : 'light'], darkMode },
           securityLevel: 'strict',
+          // Las etiquetas HTML usan foreignObject, que bloquea la exportación a PNG.
+          htmlLabels: false,
           // El visor controla el tamaño; Mermaid no debe reducir el SVG automáticamente.
           er: { useMaxWidth: false },
         })
